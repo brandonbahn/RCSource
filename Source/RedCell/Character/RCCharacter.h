@@ -1,0 +1,59 @@
+// Fill out your copyright notice in the Description page of Project Settings.
+// RCCharacter.h
+
+#pragma once
+
+#include "CoreMinimal.h"
+#include "GameFramework/Character.h"
+#include "AbilitySystemInterface.h"
+#include "Player/RCPlayerState.h"
+#include "Character/RCHealthComponent.h"
+#include "AbilitySystem/RCAbilitySet.h"
+#include "AbilitySystem/RCAbilitySystemComponent.h"  // ← new include
+#include "RCCharacter.generated.h"
+
+UCLASS()
+class REDCELL_API ARCCharacter
+  : public ACharacter
+  , public IAbilitySystemInterface
+{
+  GENERATED_BODY()
+
+public:
+  ARCCharacter(const FObjectInitializer& ObjInit = FObjectInitializer::Get());
+
+  // IAbilitySystemInterface
+  virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override;
+
+  /**
+   * Blueprint‐friendly getter that returns the RC subclass,
+   * so you never have to cast in Blueprint.
+   */
+  UFUNCTION(BlueprintCallable, Category="RC|Abilities")
+  URCAbilitySystemComponent* GetRCAbilitySystemComponent() const;
+
+  /** Blueprint‐callable accessor for GetHealthComponent */
+  UFUNCTION(BlueprintCallable, Category="RC|Health")
+  URCHealthComponent* GetHealthComponent() const { return HealthComponent; }
+
+  // Called when this pawn is possessed by a controller (server)
+  virtual void PossessedBy(AController* NewController) override;
+
+  // Called on clients when PlayerState replicates in
+  virtual void OnRep_PlayerState() override;
+
+protected:
+  // Declare this so BeginPlay() in .cpp actually matches
+  virtual void BeginPlay() override;
+
+  /** Which AbilitySet to grant on spawn (Death, Reset, etc) */
+  UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Abilities")
+  URCAbilitySet* DefaultAbilitySet;
+
+private:
+  /** The pure C++ health component that binds to the ASC */
+  UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="RC|Health", meta=(AllowPrivateAccess="true"))
+  URCHealthComponent* HealthComponent;
+};
+
+
