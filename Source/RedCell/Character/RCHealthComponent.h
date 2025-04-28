@@ -40,7 +40,7 @@ public:
     URCHealthComponent(const FObjectInitializer& ObjInit);
 
     /** Find a health component on an actor */
-    UFUNCTION(BlueprintPure, Category="RC|Health")
+    UFUNCTION(BlueprintPure, Category="RedCell|Health")
     static URCHealthComponent* FindHealthComponent(const AActor* Actor)
     {
         return Actor
@@ -49,59 +49,59 @@ public:
     }
 
     /** Hook up to an ASC (usually from PlayerState) */
-    UFUNCTION(BlueprintCallable, Category="RC|Health")
+    UFUNCTION(BlueprintCallable, Category="RedCell|Health")
     void InitializeWithAbilitySystem(URCAbilitySystemComponent* InASC);
 
     /** Unhook delegates and clear references */
-    UFUNCTION(BlueprintCallable, Category="RC|Health")
+    UFUNCTION(BlueprintCallable, Category="RedCell|Health")
     void UninitializeFromAbilitySystem();
 
     /** Current health */
-    UFUNCTION(BlueprintCallable, Category="RC|Health")
+    UFUNCTION(BlueprintCallable, Category="RedCell|Health")
     float GetHealth() const;
 
     /** Maximum health */
-    UFUNCTION(BlueprintCallable, Category="RC|Health")
+    UFUNCTION(BlueprintCallable, Category="RedCell|Health")
     float GetMaxHealth() const;
 
     /** Normalized [0–1] health */
-    UFUNCTION(BlueprintCallable, Category="RC|Health")
+    UFUNCTION(BlueprintCallable, Category="RedCell|Health")
     float GetHealthNormalized() const;
 
     /** Death state */
-    UFUNCTION(BlueprintCallable, Category="RC|Health")
+    UFUNCTION(BlueprintCallable, Category="RedCell|Health")
     ERCDeathState GetDeathState() const { return DeathState; }
 
     /** True if dead or dying */
-    UFUNCTION(BlueprintCallable, Category="RC|Health")
+    UFUNCTION(BlueprintCallable, Category="RedCell|Health")
     bool IsDeadOrDying() const { return DeathState != ERCDeathState::NotDead; }
 
     /** Begin death sequence */
-    UFUNCTION(BlueprintCallable, Category="RC|Health")
+    UFUNCTION(BlueprintCallable, Category="RedCell|Health")
     virtual void StartDeath();
 
     /** Finish death sequence */
-    UFUNCTION(BlueprintCallable, Category="RC|Health")
+    UFUNCTION(BlueprintCallable, Category="RedCell|Health")
     virtual void FinishDeath();
 
     /** Instantly kill */
-    UFUNCTION(BlueprintCallable, Category="RC|Health")
+    UFUNCTION(BlueprintCallable, Category="RedCell|Health")
     virtual void DamageSelfDestruct(bool bFellOutOfWorld = false);
 
     /** Fired when health changes */
-    UPROPERTY(BlueprintAssignable, Category="RC|Health")
+    UPROPERTY(BlueprintAssignable, Category="RedCell|Health")
     FRCHealth_AttributeChanged OnHealthChanged;
 
     /** Fired when max health changes */
-    UPROPERTY(BlueprintAssignable, Category="RC|Health")
+    UPROPERTY(BlueprintAssignable, Category="RedCell|Health")
     FRCHealth_AttributeChanged OnMaxHealthChanged;
 
     /** Fired when death starts */
-    UPROPERTY(BlueprintAssignable, Category="RC|Health")
+    UPROPERTY(BlueprintAssignable, Category="RedCell|Health")
     FRCHealth_DeathEvent OnDeathStarted;
 
     /** Fired when death finishes */
-    UPROPERTY(BlueprintAssignable, Category="RC|Health")
+    UPROPERTY(BlueprintAssignable, Category="RedCell|Health")
     FRCHealth_DeathEvent OnDeathFinished;
 
 protected:
