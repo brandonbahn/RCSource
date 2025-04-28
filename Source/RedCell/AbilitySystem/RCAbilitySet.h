@@ -6,7 +6,17 @@
 #include "GameplayAbilitySet.h"
 #include "GameplayEffect.h"
 #include "AbilitySystemComponent.h"
+#include "AttributeSet.h"
+#include "GameplayTagContainer.h"
+
+#include "GameplayAbilitySpecHandle.h"
 #include "RCAbilitySet.generated.h"
+
+class UAttributeSet;
+class UGameplayEffect;
+class URCAbilitySystemComponent;
+class URCGameplayAbility;
+class UObject;
 
 UCLASS()
 class REDCELL_API URCAbilitySet : public UGameplayAbilitySet

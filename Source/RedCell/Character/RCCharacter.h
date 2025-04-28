@@ -31,6 +31,9 @@ public:
    */
   UFUNCTION(BlueprintCallable, Category="RC|Abilities")
   URCAbilitySystemComponent* GetRCAbilitySystemComponent() const;
+    
+  UFUNCTION(BlueprintImplementableEvent, Category="Abilities")
+  void OnAbilitySystemInitialized();
 
   /** Blueprint‐callable accessor for GetHealthComponent */
   UFUNCTION(BlueprintCallable, Category="RC|Health")

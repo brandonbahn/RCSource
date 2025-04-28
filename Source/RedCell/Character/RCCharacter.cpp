@@ -54,6 +54,7 @@ void ARCCharacter::PossessedBy(AController* NewController)
       ASC->AddAbilitySet(DefaultAbilitySet);
     }
   }
+  OnAbilitySystemInitialized();
 }
 
 void ARCCharacter::OnRep_PlayerState()
@@ -77,6 +78,7 @@ void ARCCharacter::OnRep_PlayerState()
     HealthComponent->OnMaxHealthChanged.Broadcast(HealthComponent, Max, Max, nullptr);
     HealthComponent->OnHealthChanged  .Broadcast(HealthComponent, Curr, Curr, nullptr);
   }
+  OnAbilitySystemInitialized();
 }
 
 UAbilitySystemComponent* ARCCharacter::GetAbilitySystemComponent() const

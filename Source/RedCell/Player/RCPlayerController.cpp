@@ -4,6 +4,13 @@
 
 #include "RCPlayerController.h"
 #include "Character/RCCharacter.h"
+#include "RCPlayerState.h"
+#include "UI/RCHUD.h"
+#include "AbilitySystem/RCAbilitySystemComponent.h"
+#include "RCGameplayTags.h"
+#include "GameModes/RCGameState.h"
+
+#include UE_INLINE_GENERATED_CPP_BY_NAME(RCPlayerController)
 
 ARCPlayerController::ARCPlayerController(const FObjectInitializer& ObjectInitializer)
   : Super(ObjectInitializer)
@@ -25,3 +32,18 @@ void ARCPlayerController::AcknowledgePossession(APawn* P)
     }
 }
 
+ARCPlayerState* ARCPlayerController::GetRCPlayerState() const
+{
+    return CastChecked<ARCPlayerState>(PlayerState, ECastCheckedType::NullAllowed);
+}
+
+URCAbilitySystemComponent* ARCPlayerController::GetRCAbilitySystemComponent() const
+{
+    const ARCPlayerState* RCPS = GetRCPlayerState();
+    return (RCPS ? RCPS->GetRCAbilitySystemComponent() : nullptr);
+}
+
+ARCHUD* ARCPlayerController::GetRCHUD() const
+{
+    return CastChecked<ARCHUD>(GetHUD(), ECastCheckedType::NullAllowed);
+}
