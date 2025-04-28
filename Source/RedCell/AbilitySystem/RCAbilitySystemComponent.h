@@ -7,6 +7,10 @@
 #include "RCAbilitySet.h"
 #include "RCAbilitySystemComponent.generated.h"
 
+class AActor;
+class UGameplayAbility;
+class URCAbilityTagRelationshipMapping;
+
 /**
  * Custom ASC for RedCell that can receive AbilitySets and log incoming events.
  */
@@ -34,5 +38,14 @@ public:
     {
       ApplyModToAttribute(Attribute, EGameplayModOp::Override, NewValue);
     }
+    
+    /** Sets the current tag relationship mapping, if null it will clear it out */
+    void SetTagRelationshipMapping(URCAbilityTagRelationshipMapping* NewMapping);
+
+protected:
+
+    // If set, this table is used to look up tag relationships for activate and cancel
+    UPROPERTY()
+    TObjectPtr<URCAbilityTagRelationshipMapping> TagRelationshipMapping;
 
 };

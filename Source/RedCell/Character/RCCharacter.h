@@ -10,6 +10,7 @@
 #include "Character/RCHealthComponent.h"
 #include "AbilitySystem/RCAbilitySet.h"
 #include "AbilitySystem/RCAbilitySystemComponent.h"  // ← new include
+#include "Character/RCPawnData.h"
 #include "RCCharacter.generated.h"
 
 UCLASS()
@@ -29,15 +30,18 @@ public:
    * Blueprint‐friendly getter that returns the RC subclass,
    * so you never have to cast in Blueprint.
    */
-  UFUNCTION(BlueprintCallable, Category="RC|Abilities")
+  UFUNCTION(BlueprintCallable, Category="RedCell|Abilities")
   URCAbilitySystemComponent* GetRCAbilitySystemComponent() const;
     
   UFUNCTION(BlueprintImplementableEvent, Category="Abilities")
   void OnAbilitySystemInitialized();
 
   /** Blueprint‐callable accessor for GetHealthComponent */
-  UFUNCTION(BlueprintCallable, Category="RC|Health")
+  UFUNCTION(BlueprintCallable, Category="RedCell|Health")
   URCHealthComponent* GetHealthComponent() const { return HealthComponent; }
+    
+  UFUNCTION(BlueprintCallable, Category="RedCell|Pawn")
+  void InitializeFromPawnData(URCPawnData* PawnData);
 
   // Called when this pawn is possessed by a controller (server)
   virtual void PossessedBy(AController* NewController) override;
@@ -55,7 +59,7 @@ protected:
 
 private:
   /** The pure C++ health component that binds to the ASC */
-  UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="RC|Health", meta=(AllowPrivateAccess="true"))
+  UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="RedCell|Health", meta=(AllowPrivateAccess="true"))
   URCHealthComponent* HealthComponent;
 };
 

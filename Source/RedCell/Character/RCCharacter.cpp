@@ -6,6 +6,7 @@
 #include "Player/RCPlayerState.h"
 #include "AbilitySystem/RCAbilitySystemComponent.h"
 #include "Character/RCHealthComponent.h"
+#include "Character/RCPawnData.h"
 #include "AbilitySystem/RCAbilitySet.h"
 
 ARCCharacter::ARCCharacter(const FObjectInitializer& ObjInit)
@@ -39,7 +40,7 @@ void ARCCharacter::BeginPlay()
   }
 }
 
-void ARCCharacter::PossessedBy(AController* NewController)
+void ARCCharacter:: PossessedBy(AController* NewController)
 {
   Super::PossessedBy(NewController);
   SetOwner(NewController);
@@ -95,4 +96,35 @@ URCAbilitySystemComponent* ARCCharacter::GetRCAbilitySystemComponent() const
     return Cast<URCAbilitySystemComponent>(PS->GetAbilitySystemComponent());
   }
   return nullptr;
+}
+
+#if 0 // Temporarily disabling InitializeFromPawnData until RCPawnExtensionComponent is ready
+void ARCCharacter::InitializeFromPawnData(URCPawnData* PawnData)
+{
+  if (PawnData == nullptr)
+    return;
+
+  // 1) Let PlayerState ASC know we’re its avatar
+  if (ARCPlayerState* RCPS = GetPlayerState<ARCPlayerState>())
+  {
+    UAbilitySystemComponent* ASC = RCPS->GetAbilitySystemComponent();
+    ASC->InitAbilityActorInfo(RCPS, this);
+
+    // 2) Grant the default abilities
+    for (URCAbilitySet* AbilitySet : PawnData->AbilitySets)
+    {
+      if (DefaultAbilitySet)
+      {
+         ASC->AddAbilitySet(DefaultAbilitySet);
+      }
+    }
+  }
+
+  // (Optional) swap mesh/cosmetics based on PawnData
+}
+#endif
+
+void ARCCharacter::InitializeFromPawnData(URCPawnData* PawnData)
+{
+    // Stubbed out until pawn extension component is ready.
 }

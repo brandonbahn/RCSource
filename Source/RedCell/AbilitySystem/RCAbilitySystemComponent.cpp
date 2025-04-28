@@ -2,6 +2,7 @@
 
 
 #include "AbilitySystem/RCAbilitySystemComponent.h"
+#include "AbilitySystem/RCAbilityTagRelationshipMapping.h"
 #include "AbilitySystem/RCAbilitySet.h"
 
 int32 URCAbilitySystemComponent::HandleGameplayEvent(FGameplayTag EventTag, const FGameplayEventData* Payload)
@@ -17,4 +18,9 @@ void URCAbilitySystemComponent::AddAbilitySet(URCAbilitySet* AbilitySet)
         UE_LOG(LogTemp, Log, TEXT("[ASC] Granting AbilitySet %s"), *AbilitySet->GetName());
         AbilitySet->GiveAbilities(this);
     }
+}
+
+void URCAbilitySystemComponent::SetTagRelationshipMapping(URCAbilityTagRelationshipMapping* NewMapping)
+{
+    TagRelationshipMapping = NewMapping;
 }

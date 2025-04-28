@@ -18,6 +18,9 @@ namespace RCGameplayTags
     UE_DECLARE_GAMEPLAY_TAG_EXTERN(Ability_Behavior_SurvivesDeath);
 
     UE_DECLARE_GAMEPLAY_TAG_EXTERN(InitState_Spawned);
+    UE_DECLARE_GAMEPLAY_TAG_EXTERN(InitState_DataAvailable);
+    UE_DECLARE_GAMEPLAY_TAG_EXTERN(InitState_DataInitialized);
+    UE_DECLARE_GAMEPLAY_TAG_EXTERN(InitState_GameplayReady);
 
     UE_DECLARE_GAMEPLAY_TAG_EXTERN(Status_Death);
     UE_DECLARE_GAMEPLAY_TAG_EXTERN(Status_Death_Dying);
