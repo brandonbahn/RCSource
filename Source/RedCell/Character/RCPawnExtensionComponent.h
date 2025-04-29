@@ -12,6 +12,7 @@ namespace EEndPlayReason { enum Type : int; }
 
 class UGameFrameworkComponentManager;
 class URCAbilitySystemComponent;
+class URCPawnExtensionComponent;
 class URCPawnData;
 class UObject;
 struct FActorInitStateChangedParams;

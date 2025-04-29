@@ -11,7 +11,22 @@
 #include "AbilitySystem/RCAbilitySet.h"
 #include "AbilitySystem/RCAbilitySystemComponent.h"  // ← new include
 #include "Character/RCPawnData.h"
+#include "Character/RCPawnExtensionComponent.h"
 #include "RCCharacter.generated.h"
+
+class AActor;
+class AController;
+class ARCPlayerController;
+class ARCPlayerState;
+class FLifetimeProperty;
+class UAbilitySystemComponent;
+class URCAbilitySystemComponent;
+class URCHealthComponent;
+class URCPawnExtensionComponent;
+class UObject;
+struct FFrame;
+struct FGameplayTag;
+struct FGameplayTagContainer;
 
 UCLASS()
 class REDCELL_API ARCCharacter
@@ -48,6 +63,17 @@ public:
 
   // Called on clients when PlayerState replicates in
   virtual void OnRep_PlayerState() override;
+    
+  /** Extension component that drives PawnData initialization */
+  UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="RedCell|Pawn", meta=(AllowPrivateAccess="true"))
+  URCPawnExtensionComponent* PawnExtensionComponent;
+   
+  // The PawnData Asset this Pawn will initialize itself from
+  UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="RedCell|Pawn")
+  TObjectPtr<URCPawnData> PawnDataAsset;
+    
+   
+
 
 protected:
   // Declare this so BeginPlay() in .cpp actually matches

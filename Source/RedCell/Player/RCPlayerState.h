@@ -16,6 +16,7 @@ class APlayerState;
 class FName;
 class UAbilitySystemComponent;
 class URCAbilitySystemComponent;
+class URCPawnData;
 class UObject;
 struct FFrame;
 struct FGameplayTag;

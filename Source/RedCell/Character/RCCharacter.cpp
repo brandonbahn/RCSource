@@ -1,18 +1,23 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 // RCCharacter.cpp
 // Fill out your copyright notice in the Description page of Project Settings.
+#include "RCCharacter.h"
 
-#include "Character/RCCharacter.h"
 #include "Player/RCPlayerState.h"
 #include "AbilitySystem/RCAbilitySystemComponent.h"
 #include "Character/RCHealthComponent.h"
+#include "Character/RCPawnExtensionComponent.h"
+#include "RCGameplayTags.h"
 #include "Character/RCPawnData.h"
 #include "AbilitySystem/RCAbilitySet.h"
+
+#include UE_INLINE_GENERATED_CPP_BY_NAME(RCCharacter)
 
 ARCCharacter::ARCCharacter(const FObjectInitializer& ObjInit)
   : Super(ObjInit)
 {
   HealthComponent = ObjInit.CreateDefaultSubobject<URCHealthComponent>(this, TEXT("RCHealthComponent"));
+    PawnExtensionComponent = ObjInit.CreateDefaultSubobject<URCPawnExtensionComponent>(this, TEXT("PawnExtensionComponent"));
 }
 
 void ARCCharacter::BeginPlay()
@@ -44,7 +49,11 @@ void ARCCharacter:: PossessedBy(AController* NewController)
 {
   Super::PossessedBy(NewController);
   SetOwner(NewController);
-
+    if (PawnExtensionComponent)
+    {
+        PawnExtensionComponent->SetPawnData(PawnDataAsset);
+    }
+    
   // Same wiring for server‐side Possession
   if (URCAbilitySystemComponent* ASC = GetRCAbilitySystemComponent())
   {
@@ -55,6 +64,7 @@ void ARCCharacter:: PossessedBy(AController* NewController)
       ASC->AddAbilitySet(DefaultAbilitySet);
     }
   }
+     
   OnAbilitySystemInitialized();
 }
 
@@ -63,6 +73,11 @@ void ARCCharacter::OnRep_PlayerState()
   Super::OnRep_PlayerState();
   SetOwner(GetController());
 
+    if (PawnExtensionComponent)
+    {
+        PawnExtensionComponent->SetPawnData(PawnDataAsset);
+    }
+    
   // Same wiring for client clones
   if (URCAbilitySystemComponent* ASC = GetRCAbilitySystemComponent())
   {
@@ -79,6 +94,7 @@ void ARCCharacter::OnRep_PlayerState()
     HealthComponent->OnMaxHealthChanged.Broadcast(HealthComponent, Max, Max, nullptr);
     HealthComponent->OnHealthChanged  .Broadcast(HealthComponent, Curr, Curr, nullptr);
   }
+
   OnAbilitySystemInitialized();
 }
 
