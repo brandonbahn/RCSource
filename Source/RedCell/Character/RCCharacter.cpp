@@ -4,11 +4,15 @@
 #include "RCCharacter.h"
 
 #include "Player/RCPlayerState.h"
+#include "Player/RCPlayerController.h"
+#include "GameFramework/CharacterMovementComponent.h"
+#include "Components/CapsuleComponent.h"
 #include "AbilitySystem/RCAbilitySystemComponent.h"
 #include "Character/RCHealthComponent.h"
 #include "Character/RCPawnExtensionComponent.h"
-#include "RCGameplayTags.h"
 #include "Character/RCPawnData.h"
+#include "Character/RCMovementModes.h"
+#include "RCGameplayTags.h"
 #include "AbilitySystem/RCAbilitySet.h"
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(RCCharacter)
@@ -16,8 +20,15 @@
 ARCCharacter::ARCCharacter(const FObjectInitializer& ObjInit)
   : Super(ObjInit)
 {
+  
+  PawnExtensionComponent = ObjInit.CreateDefaultSubobject<URCPawnExtensionComponent>(this, TEXT("PawnExtensionComponent"));
+  PawnExtensionComponent->OnAbilitySystemInitialized_RegisterAndCall(FSimpleMulticastDelegate::FDelegate::CreateUObject(this, &ThisClass::OnAbilitySystemInitialized));
+  PawnExtensionComponent->OnAbilitySystemUninitialized_Register(FSimpleMulticastDelegate::FDelegate::CreateUObject(this, &ThisClass::OnAbilitySystemUninitialized));
+    
   HealthComponent = ObjInit.CreateDefaultSubobject<URCHealthComponent>(this, TEXT("RCHealthComponent"));
-    PawnExtensionComponent = ObjInit.CreateDefaultSubobject<URCPawnExtensionComponent>(this, TEXT("PawnExtensionComponent"));
+  HealthComponent->OnDeathStarted.AddDynamic(this, &ThisClass::OnDeathStarted);
+  HealthComponent->OnDeathFinished.AddDynamic(this, &ThisClass::OnDeathFinished);
+    
 }
 
 void ARCCharacter::BeginPlay()
@@ -68,6 +79,29 @@ void ARCCharacter:: PossessedBy(AController* NewController)
   OnAbilitySystemInitialized();
 }
 
+void ARCCharacter::UnPossessed()
+{
+    // Call parent to handle default unpossess behavior
+    Super::UnPossessed();
+
+    // Notify the pawn extension component of possession change
+    if (PawnExtensionComponent)
+    {
+        PawnExtensionComponent->HandleControllerChanged();
+    }
+
+    // Reset team to default (everyone on team 0)
+    MyTeamID = 0;
+}
+
+
+void ARCCharacter::OnRep_Controller()
+{
+    Super::OnRep_Controller();
+
+    PawnExtensionComponent->HandleControllerChanged();
+}
+
 void ARCCharacter::OnRep_PlayerState()
 {
   Super::OnRep_PlayerState();
@@ -92,7 +126,7 @@ void ARCCharacter::OnRep_PlayerState()
     const float Curr = HealthComponent->GetHealth();
     const float Max  = HealthComponent->GetMaxHealth();
     HealthComponent->OnMaxHealthChanged.Broadcast(HealthComponent, Max, Max, nullptr);
-    HealthComponent->OnHealthChanged  .Broadcast(HealthComponent, Curr, Curr, nullptr);
+    HealthComponent->OnHealthChanged.Broadcast(HealthComponent, Curr, Curr, nullptr);
   }
 
   OnAbilitySystemInitialized();
@@ -114,33 +148,188 @@ URCAbilitySystemComponent* ARCCharacter::GetRCAbilitySystemComponent() const
   return nullptr;
 }
 
-#if 0 // Temporarily disabling InitializeFromPawnData until RCPawnExtensionComponent is ready
-void ARCCharacter::InitializeFromPawnData(URCPawnData* PawnData)
+
+
+/* added from RCCharacter*/
+ARCPlayerController* ARCCharacter::GetRCPlayerController() const
 {
-  if (PawnData == nullptr)
-    return;
-
-  // 1) Let PlayerState ASC know we’re its avatar
-  if (ARCPlayerState* RCPS = GetPlayerState<ARCPlayerState>())
-  {
-    UAbilitySystemComponent* ASC = RCPS->GetAbilitySystemComponent();
-    ASC->InitAbilityActorInfo(RCPS, this);
-
-    // 2) Grant the default abilities
-    for (URCAbilitySet* AbilitySet : PawnData->AbilitySets)
-    {
-      if (DefaultAbilitySet)
-      {
-         ASC->AddAbilitySet(DefaultAbilitySet);
-      }
-    }
-  }
-
-  // (Optional) swap mesh/cosmetics based on PawnData
+    return CastChecked<ARCPlayerController>(Controller, ECastCheckedType::NullAllowed);
 }
-#endif
 
-void ARCCharacter::InitializeFromPawnData(URCPawnData* PawnData)
+ARCPlayerState* ARCCharacter::GetRCPlayerState() const
 {
-    // Stubbed out until pawn extension component is ready.
+    return CastChecked<ARCPlayerState>(GetPlayerState(), ECastCheckedType::NullAllowed);
+}
+
+void ARCCharacter::OnAbilitySystemInitialized()
+{
+    URCAbilitySystemComponent* RCASC = GetRCAbilitySystemComponent();
+    check(RCASC);
+
+    HealthComponent->InitializeWithAbilitySystem(RCASC);
+
+    InitializeGameplayTags();
+}
+
+void ARCCharacter::OnAbilitySystemUninitialized()
+{
+    HealthComponent->UninitializeFromAbilitySystem();
+}
+
+void ARCCharacter::InitializeGameplayTags()
+{
+    if (URCAbilitySystemComponent* ASC = GetRCAbilitySystemComponent())
+    {
+        // 1) Clear any leftover tags
+        for (auto& Pair : RCGameplayTags::MovementModeTagMap)
+        {
+            ASC->SetLooseGameplayTagCount(Pair.Value, 0);
+        }
+        for (auto& Pair : RCGameplayTags::CustomMovementModeTagMap)
+        {
+            ASC->SetLooseGameplayTagCount(Pair.Value, 0);
+        }
+
+        /*
+        // 2) Bind to MovementModeChanged (no C++ sub‐class required)
+        if (UCharacterMovementComponent* MoveComp = GetCharacterMovement())
+        {
+            MoveComp->MovementModeChangedDelegate.AddDynamic(
+                this, &ARCCharacter::OnMovementModeChanged);
+
+            // 3) Seed the very first mode tag
+            OnMovementModeChanged(this, MoveComp->MovementMode, MoveComp->CustomMovementMode);
+        }
+         */
+    }
+}
+
+
+void ARCCharacter::GetOwnedGameplayTags(FGameplayTagContainer& TagContainer) const
+{
+    if (const URCAbilitySystemComponent* RCASC = GetRCAbilitySystemComponent())
+    {
+        RCASC->GetOwnedGameplayTags(TagContainer);
+    }
+}
+
+bool ARCCharacter::HasMatchingGameplayTag(FGameplayTag TagToCheck) const
+{
+    if (const URCAbilitySystemComponent* RCASC = GetRCAbilitySystemComponent())
+    {
+        return RCASC->HasMatchingGameplayTag(TagToCheck);
+    }
+
+    return false;
+}
+
+bool ARCCharacter::HasAllMatchingGameplayTags(const FGameplayTagContainer& TagContainer) const
+{
+    if (const URCAbilitySystemComponent* RCASC = GetRCAbilitySystemComponent())
+    {
+        return RCASC->HasAllMatchingGameplayTags(TagContainer);
+    }
+
+    return false;
+}
+
+bool ARCCharacter::HasAnyMatchingGameplayTags(const FGameplayTagContainer& TagContainer) const
+{
+    if (const URCAbilitySystemComponent* RCASC = GetRCAbilitySystemComponent())
+    {
+        return RCASC->HasAnyMatchingGameplayTags(TagContainer);
+    }
+
+    return false;
+}
+
+//GASP enum tags added//
+void ARCCharacter::NotifyAllMovementTags(
+    E_MovementMode      NewMode,
+    E_Gait              NewGait,
+    E_MovementState     NewState,
+    E_RotationMode      NewRotation,
+    E_Stance            NewStance,
+    E_MovementDirection NewDir)
+{
+    if (auto* ASC = GetRCAbilitySystemComponent())
+    {
+        // Clear every map
+        for (auto& P : RCGameplayTags::MoveModeTagMap)         ASC->SetLooseGameplayTagCount(P.Value, 0);
+        for (auto& P : RCGameplayTags::GaitTagMap)                 ASC->SetLooseGameplayTagCount(P.Value, 0);
+        for (auto& P : RCGameplayTags::MovementStateTagMap)        ASC->SetLooseGameplayTagCount(P.Value, 0);
+        for (auto& P : RCGameplayTags::RotationModeTagMap)         ASC->SetLooseGameplayTagCount(P.Value, 0);
+        for (auto& P : RCGameplayTags::StanceTagMap)               ASC->SetLooseGameplayTagCount(P.Value, 0);
+        for (auto& P : RCGameplayTags::MovementDirectionTagMap)    ASC->SetLooseGameplayTagCount(P.Value, 0);
+
+        // Set the ones you care about now:
+        if (auto* T = RCGameplayTags::MoveModeTagMap.Find(NewMode))       ASC->SetLooseGameplayTagCount(*T, 1);
+        if (auto* T = RCGameplayTags::GaitTagMap.Find(NewGait))               ASC->SetLooseGameplayTagCount(*T, 1);
+        if (auto* T = RCGameplayTags::MovementStateTagMap.Find(NewState))     ASC->SetLooseGameplayTagCount(*T, 1);
+        if (auto* T = RCGameplayTags::RotationModeTagMap.Find(NewRotation))   ASC->SetLooseGameplayTagCount(*T, 1);
+        if (auto* T = RCGameplayTags::StanceTagMap.Find(NewStance))           ASC->SetLooseGameplayTagCount(*T, 1);
+        if (auto* T = RCGameplayTags::MovementDirectionTagMap.Find(NewDir))   ASC->SetLooseGameplayTagCount(*T, 1);
+    }
+}
+
+void ARCCharacter::FellOutOfWorld(const class UDamageType& dmgType)
+{
+    HealthComponent->DamageSelfDestruct(/*bFellOutOfWorld=*/ true);
+}
+
+void ARCCharacter::OnDeathStarted(AActor*)
+{
+    DisableMovementAndCollision();
+}
+
+void ARCCharacter::OnDeathFinished(AActor*)
+{
+    GetWorld()->GetTimerManager().SetTimerForNextTick(this, &ThisClass::DestroyDueToDeath);
+}
+
+void ARCCharacter::DisableMovementAndCollision()
+{
+    if (Controller)
+    {
+        Controller->SetIgnoreMoveInput(true);
+    }
+
+    /*
+    UCapsuleComponent* CapsuleComp = GetCapsuleComponent();
+    check(CapsuleComp);
+    CapsuleComp->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+    CapsuleComp->SetCollisionResponseToAllChannels(ECR_Ignore);
+
+    URCCharacterMovementComponent* RCMoveComp = CastChecked<URCCharacterMovementComponent>(GetCharacterMovement());
+    RCMoveComp->StopMovementImmediately();
+    RCMoveComp->DisableMovement();
+     */
+}
+
+void ARCCharacter::DestroyDueToDeath()
+{
+    K2_OnDeathFinished();
+
+    UninitAndDestroy();
+}
+
+
+void ARCCharacter::UninitAndDestroy()
+{
+    if (GetLocalRole() == ROLE_Authority)
+    {
+        DetachFromControllerPendingDestroy();
+        SetLifeSpan(0.1f);
+    }
+
+    // Uninitialize the ASC if we're still the avatar actor (otherwise another pawn already did it when they became the avatar actor)
+    if (URCAbilitySystemComponent* RCASC = GetRCAbilitySystemComponent())
+    {
+        if (RCASC->GetAvatarActor() == this)
+        {
+            PawnExtensionComponent->UninitializeAbilitySystem();
+        }
+    }
+
+    SetActorHiddenInGame(true);
 }
