@@ -103,7 +103,7 @@ public:
 */
 
 protected:
-    
+
   virtual void OnAbilitySystemInitialized();
   virtual void OnAbilitySystemUninitialized();
 
