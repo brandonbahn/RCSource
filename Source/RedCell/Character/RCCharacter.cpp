@@ -292,7 +292,30 @@ void ARCCharacter::DisableMovementAndCollision()
     if (Controller)
     {
         Controller->SetIgnoreMoveInput(true);
+        
+        // If this is a player controller, also disable input entirely
+        if (APlayerController* PC = Cast<APlayerController>(Controller))
+        {
+            DisableInput(PC);
+        }
     }
+    
+    // Disable all movement on the CharacterMovementComponent
+    if (UCharacterMovementComponent* MoveComp = GetCharacterMovement())
+    {
+        MoveComp->StopMovementImmediately();
+        MoveComp->DisableMovement();
+    }
+    
+    // Ensure jumping is stopped
+    StopJumping();
+
+    // Disable collisions if desired (uncomment if needed)
+    // if (UCapsuleComponent* CapsuleComp = GetCapsuleComponent())
+    // {
+    //     CapsuleComp->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+    //     CapsuleComp->SetCollisionResponseToAllChannels(ECR_Ignore);
+    // }
 
     /*
     UCapsuleComponent* CapsuleComp = GetCapsuleComponent();
