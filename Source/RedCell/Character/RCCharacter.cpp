@@ -3,6 +3,8 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 #include "RCCharacter.h"
 
+#include "Net/UnrealNetwork.h"
+
 #include "Player/RCPlayerState.h"
 #include "Player/RCPlayerController.h"
 #include "GameFramework/CharacterMovementComponent.h"

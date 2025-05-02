@@ -49,6 +49,7 @@ public class RedCell : ModuleRules
                 // e.g. "Slate", "SlateCore" if you need them
                 "Slate",           // Lyra has these
                 "SlateCore",       // in its PrivateDependencies
+                "EnhancedInput",
                 "CommonUI",
                 "CommonInput",     // needed by the CommonUI ScaleBox slot
                 "CommonGame",

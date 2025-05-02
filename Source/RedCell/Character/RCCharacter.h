@@ -47,6 +47,7 @@ class REDCELL_API ARCCharacter
 {
   GENERATED_BODY()
 
+
 public:
   ARCCharacter(const FObjectInitializer& ObjInit = FObjectInitializer::Get());
     
@@ -146,6 +147,9 @@ protected:
   /** Which AbilitySet to grant on spawn (Death, Reset, etc) */
   UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Abilities")
   URCAbilitySet* DefaultAbilitySet;
+    
+ 
+
 
 private:
     

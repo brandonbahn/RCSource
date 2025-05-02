@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Abilities/RCGameplayAbility.h"
 #include "AbilitySystemComponent.h"
 #include "RCAbilitySet.h"
 #include "RCAbilitySystemComponent.generated.h"
@@ -10,7 +11,9 @@
 class AActor;
 class UGameplayAbility;
 class URCAbilityTagRelationshipMapping;
-
+class UObject;
+struct FFrame;
+struct FGameplayAbilityTargetDataHandle;
 /**
  * Custom ASC for RedCell that can receive AbilitySets and log incoming events.
  */
@@ -41,6 +44,14 @@ public:
     
     /** Sets the current tag relationship mapping, if null it will clear it out */
     void SetTagRelationshipMapping(URCAbilityTagRelationshipMapping* NewMapping);
+
+    /** Returns true if any currently-active ability has the given tag */
+    UFUNCTION(BlueprintCallable, Category="Abilities")
+    bool IsAbilityActiveByTag(FGameplayTag AbilityTag) const;
+    
+    /** Returns true if any currently-granted ability has the given tag */
+    UFUNCTION(BlueprintCallable, Category="Abilities")
+    bool IsAbilityGrantedByTag(FGameplayTag AbilityTag) const;
 
 protected:
 

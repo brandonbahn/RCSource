@@ -2,8 +2,11 @@
 
 
 #include "AbilitySystem/RCAbilitySystemComponent.h"
+#include "AbilitySystem/Abilities/RCGameplayAbility.h"
 #include "AbilitySystem/RCAbilityTagRelationshipMapping.h"
 #include "AbilitySystem/RCAbilitySet.h"
+#include "Abilities/GameplayAbility.h"
+#include "Engine/World.h"
 
 int32 URCAbilitySystemComponent::HandleGameplayEvent(FGameplayTag EventTag, const FGameplayEventData* Payload)
 {
@@ -23,4 +26,33 @@ void URCAbilitySystemComponent::AddAbilitySet(URCAbilitySet* AbilitySet)
 void URCAbilitySystemComponent::SetTagRelationshipMapping(URCAbilityTagRelationshipMapping* NewMapping)
 {
     TagRelationshipMapping = NewMapping;
+}
+
+bool URCAbilitySystemComponent::IsAbilityActiveByTag(FGameplayTag AbilityTag) const
+{
+    for (const FGameplayAbilitySpec& Spec : ActivatableAbilities.Items)
+    {
+        if (!Spec.IsActive())
+        {
+            continue;
+        }
+        // Use the ability's tags to identify it
+        if (Spec.Ability && Spec.Ability->GetAssetTags().HasTagExact(AbilityTag))
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
+bool URCAbilitySystemComponent::IsAbilityGrantedByTag(FGameplayTag AbilityTag) const
+{
+    for (const FGameplayAbilitySpec& Spec : ActivatableAbilities.Items)
+    {
+        if (Spec.Ability && Spec.Ability->GetAssetTags().HasTagExact(AbilityTag))
+        {
+            return true;
+        }
+    }
+    return false;
 }
