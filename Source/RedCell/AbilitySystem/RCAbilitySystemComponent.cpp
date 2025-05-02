@@ -23,6 +23,37 @@ void URCAbilitySystemComponent::AddAbilitySet(URCAbilitySet* AbilitySet)
     }
 }
 
+void URCAbilitySystemComponent::AbilityInputTagPressed(const FGameplayTag& InputTag)
+{
+    if (InputTag.IsValid())
+    {
+        for (const FGameplayAbilitySpec& AbilitySpec : ActivatableAbilities.Items)
+        {
+            if (AbilitySpec.Ability && (AbilitySpec.GetDynamicSpecSourceTags().HasTagExact(InputTag)))
+            {
+                InputPressedSpecHandles.AddUnique(AbilitySpec.Handle);
+                InputHeldSpecHandles.AddUnique(AbilitySpec.Handle);
+            }
+        }
+    }
+}
+
+void URCAbilitySystemComponent::AbilityInputTagReleased(const FGameplayTag& InputTag)
+{
+    if (InputTag.IsValid())
+    {
+        for (const FGameplayAbilitySpec& AbilitySpec : ActivatableAbilities.Items)
+        {
+            if (AbilitySpec.Ability && (AbilitySpec.GetDynamicSpecSourceTags().HasTagExact(InputTag)))
+            {
+                InputReleasedSpecHandles.AddUnique(AbilitySpec.Handle);
+                InputHeldSpecHandles.Remove(AbilitySpec.Handle);
+            }
+        }
+    }
+}
+
+
 void URCAbilitySystemComponent::SetTagRelationshipMapping(URCAbilityTagRelationshipMapping* NewMapping)
 {
     TagRelationshipMapping = NewMapping;

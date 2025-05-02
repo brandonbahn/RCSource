@@ -69,6 +69,9 @@ public:
 
     /** Should be called by the owning pawn when the player state has been replicated. */
     void HandlePlayerStateReplicated();
+    
+    /** Should be called by the owning pawn when the input component is setup. */
+    void SetupPlayerInputComponent();
 
     /** Register with the OnAbilitySystemInitialized delegate and broadcast if our pawn has been registered with the ability system component */
     void OnAbilitySystemInitialized_RegisterAndCall(FSimpleMulticastDelegate::FDelegate Delegate);

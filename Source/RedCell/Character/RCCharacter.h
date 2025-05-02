@@ -23,6 +23,7 @@ class ARCPlayerController;
 class ARCPlayerState;
 class FLifetimeProperty;
 class UAbilitySystemComponent;
+class UInputComponent;
 class URCAbilitySystemComponent;
 class URCHealthComponent;
 class URCPawnExtensionComponent;
@@ -113,6 +114,8 @@ protected:
 
   virtual void OnRep_Controller() override;
   virtual void OnRep_PlayerState() override;
+    
+  virtual void SetupPlayerInputComponent(UInputComponent* PlayerInputComponent) override;
     
   void InitializeGameplayTags();
     

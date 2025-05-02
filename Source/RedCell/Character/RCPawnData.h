@@ -9,6 +9,7 @@
 class APawn;
 class URCAbilitySet;
 class URCAbilityTagRelationshipMapping;
+class URCInputConfig;
 class UObject;
 
 
@@ -39,8 +40,11 @@ public:
     // What mapping of ability tags to use for actions taking by this pawn
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "RedCell|Abilities")
     TObjectPtr<URCAbilityTagRelationshipMapping> TagRelationshipMapping;
-
     
+    // Input configuration used by player controlled pawns to create input mappings and bind input actions.
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "RedCell|Input")
+    TObjectPtr<URCInputConfig> InputConfig;
+
     /** (Optional) Portrait, DisplayName, etc. for UI */
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="UI")
     FText DisplayName;

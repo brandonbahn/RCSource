@@ -178,6 +178,17 @@ void ARCCharacter::OnAbilitySystemUninitialized()
     HealthComponent->UninitializeFromAbilitySystem();
 }
 
+
+// This connects our new PlayerInputConfigs //
+void ARCCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
+{
+    Super::SetupPlayerInputComponent(PlayerInputComponent);
+
+    PawnExtensionComponent->SetupPlayerInputComponent();
+}
+
+
+
 void ARCCharacter::InitializeGameplayTags()
 {
     if (URCAbilitySystemComponent* ASC = GetRCAbilitySystemComponent())

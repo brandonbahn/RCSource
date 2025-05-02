@@ -199,6 +199,12 @@ void URCPawnExtensionComponent::HandlePlayerStateReplicated()
     CheckDefaultInitialization();
 }
 
+void URCPawnExtensionComponent::SetupPlayerInputComponent()
+{
+    CheckDefaultInitialization();
+}
+
+
 void URCPawnExtensionComponent::CheckDefaultInitialization()
 {
     // Before checking our progress, try progressing any other features we might depend on
