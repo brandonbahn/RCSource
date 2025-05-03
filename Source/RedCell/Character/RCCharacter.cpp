@@ -31,6 +31,7 @@ ARCCharacter::ARCCharacter(const FObjectInitializer& ObjInit)
   HealthComponent->OnDeathStarted.AddDynamic(this, &ThisClass::OnDeathStarted);
   HealthComponent->OnDeathFinished.AddDynamic(this, &ThisClass::OnDeathFinished);
     
+  HeroComponent = ObjInit.CreateDefaultSubobject<URCHeroComponent>(this, TEXT("RCHeroComponent"));
 }
 
 void ARCCharacter::BeginPlay()

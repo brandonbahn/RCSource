@@ -13,6 +13,7 @@
 #include "AbilitySystem/RCAbilitySystemComponent.h"  // ← new include
 #include "Character/RCPawnData.h"
 #include "Character/RCPawnExtensionComponent.h"
+#include "Character/RCHeroComponent.h"
 #include "Character/RCMovementModes.h"
 #include "Player/RCPlayerController.h"
 #include "RCCharacter.generated.h"
@@ -159,7 +160,10 @@ private:
   UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "RedCell|Pawn", meta=(AllowPrivateAccess="true"))
   TObjectPtr<URCPawnExtensionComponent> PawnExtensionComponent;
     
+  UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "RedCell|Pawn", meta=(AllowPrivateAccess="true"))
+  TObjectPtr<URCHeroComponent> HeroComponent;
+    
   /** The pure C++ health component that binds to the ASC */
-  UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="RedCell|Health", meta=(AllowPrivateAccess="true"))
+  UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="RedCell|Health", meta=(DisplayName="Health Component", AllowPrivateAccess="true"))
   URCHealthComponent* HealthComponent;
 };
