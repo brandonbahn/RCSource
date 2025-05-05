@@ -149,8 +149,8 @@ protected:
   virtual void BeginPlay() override;
 
   /** Which AbilitySet to grant on spawn (Death, Reset, etc) */
-  UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Abilities")
-  URCAbilitySet* DefaultAbilitySet;
+  //UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Abilities")
+  //URCAbilitySet* DefaultAbilitySet;
     
  
 

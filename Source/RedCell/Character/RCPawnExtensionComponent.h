@@ -95,7 +95,7 @@ protected:
     FSimpleMulticastDelegate OnAbilitySystemUninitialized;
 
     /** Pawn data used to create the pawn. Specified from a spawn function or on a placed instance. */
-    UPROPERTY(EditInstanceOnly, ReplicatedUsing = OnRep_PawnData, Category = "RedCell|Pawn")
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, ReplicatedUsing = OnRep_PawnData, Category = "RedCell|Pawn")
     TObjectPtr<const URCPawnData> PawnData;
 
     /** Pointer to the ability system component that is cached for convenience. */

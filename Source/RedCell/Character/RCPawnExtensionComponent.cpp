@@ -74,6 +74,8 @@ void URCPawnExtensionComponent::EndPlay(const EEndPlayReason::Type EndPlayReason
 
 void URCPawnExtensionComponent::SetPawnData(const URCPawnData* InPawnData)
 {
+    UE_LOG(LogTemp, Warning, TEXT("SetPawnData called: InPawnData = %s"), *GetNameSafe(InPawnData));
+    
     check(InPawnData);
 
     APawn* Pawn = GetPawnChecked<APawn>();

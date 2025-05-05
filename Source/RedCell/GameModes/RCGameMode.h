@@ -27,8 +27,15 @@ class REDCELL_API ARCGameMode : public AGameModeBase
     GENERATED_BODY()
 
 public:
-    // Declare the custom constructor to prevent UHT from generating a default one
+    
     ARCGameMode(const FObjectInitializer& ObjectInitializer = FObjectInitializer::Get());
+    
+    UFUNCTION(BlueprintCallable, Category = "RedCell|Pawn")
+    const URCPawnData* GetPawnDataForController(const AController* InController) const;
+    
+    //~AGameModeBase interface
+    virtual UClass* GetDefaultPawnClassForController_Implementation(AController* InController) override;
+    virtual APawn* SpawnDefaultPawnAtTransform_Implementation(AController* NewPlayer, const FTransform& SpawnTransform) override;
     
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Loadout")
     TArray<URCPawnData*> AvailablePawnData;

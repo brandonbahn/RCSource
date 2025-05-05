@@ -8,6 +8,9 @@
 #include "NativeGameplayTags.h"           // for the UE_DECLARE_GAMEPLAY_TAG macros
 #include "RCHealthSet.generated.h"
 
+class UObject;
+struct FFrame;
+
 // Forward declaration of the callback data used in the execute hooks
 struct FGameplayEffectModCallbackData;
 

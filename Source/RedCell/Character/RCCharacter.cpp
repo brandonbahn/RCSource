@@ -46,10 +46,10 @@ void ARCCharacter::BeginPlay()
     HealthComponent->InitializeWithAbilitySystem(ASC);
 
     // Grant default set of abilities & init-effects (Death, Reset, etc)
-    if (DefaultAbilitySet)
-    {
-      ASC->AddAbilitySet(DefaultAbilitySet);
-    }
+    //if (DefaultAbilitySet)
+    //{
+    //  ASC->AddAbilitySet(DefaultAbilitySet);
+    //}
 
     // Seed any UI with the current health values
     const float Curr = HealthComponent->GetHealth();
@@ -65,6 +65,8 @@ void ARCCharacter:: PossessedBy(AController* NewController)
   SetOwner(NewController);
     if (PawnExtensionComponent)
     {
+        // Log what the actor‐level PawnDataAsset is before we pass it in:
+        UE_LOG(LogTemp, Warning, TEXT("PossessedBy: PawnDataAsset = %s"), *GetNameSafe(PawnDataAsset));
         PawnExtensionComponent->SetPawnData(PawnDataAsset);
     }
     
@@ -73,10 +75,10 @@ void ARCCharacter:: PossessedBy(AController* NewController)
   {
     ASC->InitAbilityActorInfo(CastChecked<ARCPlayerState>(GetPlayerState()), this);
     HealthComponent->InitializeWithAbilitySystem(ASC);
-    if (DefaultAbilitySet)
-    {
-      ASC->AddAbilitySet(DefaultAbilitySet);
-    }
+    //if (DefaultAbilitySet)
+    //{
+    //  ASC->AddAbilitySet(DefaultAbilitySet);
+    //}
   }
      
   OnAbilitySystemInitialized();
@@ -120,10 +122,10 @@ void ARCCharacter::OnRep_PlayerState()
   {
     ASC->InitAbilityActorInfo(CastChecked<ARCPlayerState>(GetPlayerState()), this);
     HealthComponent->InitializeWithAbilitySystem(ASC);
-    if (DefaultAbilitySet)
-    {
-      ASC->AddAbilitySet(DefaultAbilitySet);
-    }
+    //if (DefaultAbilitySet)
+    //{
+    //  ASC->AddAbilitySet(DefaultAbilitySet);
+    //}
 
     // Re‐seed UI on clients
     const float Curr = HealthComponent->GetHealth();

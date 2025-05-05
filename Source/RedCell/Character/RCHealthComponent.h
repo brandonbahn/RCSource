@@ -120,8 +120,9 @@ private:
     UPROPERTY()
     URCAbilitySystemComponent* AbilitySystemComponent;
 
+    // Health set used by this component.
     UPROPERTY()
-    const URCHealthSet* HealthSet;
+    TObjectPtr<const URCHealthSet> HealthSet;
 
     UPROPERTY(ReplicatedUsing=OnRep_DeathState)
     ERCDeathState DeathState;

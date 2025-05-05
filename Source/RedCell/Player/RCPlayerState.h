@@ -42,6 +42,13 @@ public:
     UFUNCTION(BlueprintCallable, Category = "RedCell|PlayerState")
     URCAbilitySystemComponent* GetRCAbilitySystemComponent() const { return AbilitySystemComponent; }
     virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override;
+    
+    template <class T>
+    const T* GetPawnData() const { return Cast<T>(PawnData); }
+    
+    virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
+    void SetPawnData(const URCPawnData* InPawnData);
 
     //~AActor interface
     virtual void PreInitializeComponents() override;
@@ -80,6 +87,15 @@ public:
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="AbilitySystem")
     URCAbilitySet* DefaultAbilitySet;
     
+protected:
+    UFUNCTION()
+    void OnRep_PawnData();
+
+protected:
+
+    UPROPERTY(ReplicatedUsing = OnRep_PawnData)
+    TObjectPtr<const URCPawnData> PawnData;
+    
 private:
 
     // The ability system component sub-object used by player characters.
@@ -91,7 +107,7 @@ private:
     TObjectPtr<URCHealthSet> HealthSet;
     
     //***Combat attribute set used by this actor once set-up***//
-  //UPROPERTY()
-  //TObjectPtr<const class ULyraCombatSet> CombatSet;
+    UPROPERTY()
+    TObjectPtr<const class URCCombatSet> CombatSet;
     
 };

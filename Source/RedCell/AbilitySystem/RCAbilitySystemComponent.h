@@ -6,6 +6,7 @@
 #include "Abilities/RCGameplayAbility.h"
 #include "AbilitySystemComponent.h"
 #include "RCAbilitySet.h"
+#include "NativeGameplayTags.h"
 #include "RCAbilitySystemComponent.generated.h"
 
 class AActor;
@@ -25,19 +26,28 @@ class REDCELL_API URCAbilitySystemComponent : public UAbilitySystemComponent
     GENERATED_BODY()
 
 public:
+
+    URCAbilitySystemComponent(const FObjectInitializer& ObjectInitializer = FObjectInitializer::Get());
+    
+    typedef TFunctionRef<bool(const URCGameplayAbility* RCAbility, FGameplayAbilitySpecHandle Handle)> TShouldCancelAbilityFunc;
+    void CancelAbilitiesByFunc(TShouldCancelAbilityFunc ShouldCancelFunc, bool bReplicateCancelAbility);
+    
     /** Grant all Abilities and init-Effects in this set */
+    /*
     UFUNCTION(BlueprintCallable, Category="Abilities")
     void AddAbilitySet(URCAbilitySet* AbilitySet);
+     */
+    
+    virtual int32 HandleGameplayEvent(FGameplayTag EventTag, const FGameplayEventData* Payload) override;
     
     void AbilityInputTagPressed(const FGameplayTag& InputTag);
     void AbilityInputTagReleased(const FGameplayTag& InputTag);
-
-    /**
-     * Override to log every gameplay event the ASC receives,
-     * so you can see when Death/Reset tags are handled.
-     */
-    virtual int32 HandleGameplayEvent(FGameplayTag EventTag, const FGameplayEventData* Payload) override;
     
+    bool IsActivationGroupBlocked(ERCAbilityActivationGroup Group) const;
+    void AddAbilityToActivationGroup(ERCAbilityActivationGroup Group, URCGameplayAbility* RCAbility);
+    void RemoveAbilityFromActivationGroup(ERCAbilityActivationGroup Group, URCGameplayAbility* RCAbility);
+    void CancelActivationGroupAbilities(ERCAbilityActivationGroup Group, URCGameplayAbility* IgnoreRCAbility, bool bReplicateCancelAbility);
+
     /** Instantly override any attribute to a new value (e.g. refill Health to MaxHealth) */
     UFUNCTION(BlueprintCallable, Category="Abilities")
     void OverrideAttribute(FGameplayAttribute Attribute, float NewValue)
@@ -48,6 +58,9 @@ public:
     
     /** Sets the current tag relationship mapping, if null it will clear it out */
     void SetTagRelationshipMapping(URCAbilityTagRelationshipMapping* NewMapping);
+    
+    /** Looks at ability tags and gathers additional required and blocking tags */
+    void GetAdditionalActivationTagRequirements(const FGameplayTagContainer& AbilityTags, FGameplayTagContainer& OutActivationRequired, FGameplayTagContainer& OutActivationBlocked) const;
 
     /** Returns true if any currently-active ability has the given tag */
     UFUNCTION(BlueprintCallable, Category="Abilities")
@@ -72,4 +85,7 @@ protected:
     // Handles to abilities that have their input held.
     TArray<FGameplayAbilitySpecHandle> InputHeldSpecHandles;
 
+    // Number of abilities running in each activation group.
+    int32 ActivationGroupCounts[(uint8)ERCAbilityActivationGroup::MAX];
 };
+

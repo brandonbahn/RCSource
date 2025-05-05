@@ -28,6 +28,7 @@ public class RedCell : ModuleRules
                 "Core",
                 "CoreUObject",
                 "Engine",
+                "PhysicsCore",
                 "InputCore",
                 "GameplayAbilities",
                 "GameplayTags",
@@ -50,6 +51,7 @@ public class RedCell : ModuleRules
                 "Slate",           // Lyra has these
                 "SlateCore",       // in its PrivateDependencies
                 "EnhancedInput",
+                "NetCore",
                 "CommonUI",
                 "CommonInput",     // needed by the CommonUI ScaleBox slot
                 "CommonGame",
@@ -60,5 +62,8 @@ public class RedCell : ModuleRules
         );
         
         // (You can also add DynamicallyLoadedModuleNames here if needed)
+        
+        SetupGameplayDebuggerSupport(Target);
+        SetupIrisSupport(Target);
     }
 }
