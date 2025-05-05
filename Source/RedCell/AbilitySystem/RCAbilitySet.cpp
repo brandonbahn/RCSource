@@ -86,6 +86,7 @@ void URCAbilitySet::GiveToAbilitySystem(URCAbilitySystemComponent* RCASC, FRCAbi
 
         if (!IsValid(SetToGrant.AttributeSet))
         {
+            UE_LOG(LogTemp, Error, TEXT("GrantedAttributes[%d] on ability set [%s] is not valid"), SetIndex, *GetNameSafe(this));
             continue;
         }
 
@@ -105,6 +106,7 @@ void URCAbilitySet::GiveToAbilitySystem(URCAbilitySystemComponent* RCASC, FRCAbi
 
         if (!IsValid(AbilityToGrant.Ability))
         {
+            UE_LOG(LogTemp, Error, TEXT("GrantedGameplayAbilities[%d] on ability set [%s] is not valid."), AbilityIndex, *GetNameSafe(this));
             continue;
         }
 

@@ -259,7 +259,7 @@ bool ARCCharacter::HasAnyMatchingGameplayTags(const FGameplayTagContainer& TagCo
     return false;
 }
 
-//GASP enum tags added//
+//Function to receive DABP movement enums and tags for enums in Source code//
 void ARCCharacter::NotifyAllMovementTags(
     E_MovementMode      NewMode,
     E_Gait              NewGait,
