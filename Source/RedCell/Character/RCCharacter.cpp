@@ -11,6 +11,7 @@
 #include "Components/CapsuleComponent.h"
 #include "AbilitySystem/RCAbilitySystemComponent.h"
 #include "Character/RCHealthComponent.h"
+#include "Character/RCCoreComponent.h"
 #include "Character/RCPawnExtensionComponent.h"
 #include "Character/RCPawnData.h"
 #include "Character/RCMovementModes.h"
@@ -32,6 +33,8 @@ ARCCharacter::ARCCharacter(const FObjectInitializer& ObjInit)
   HealthComponent->OnDeathFinished.AddDynamic(this, &ThisClass::OnDeathFinished);
     
   HeroComponent = ObjInit.CreateDefaultSubobject<URCHeroComponent>(this, TEXT("RCHeroComponent"));
+    
+  CoreComponent = ObjInit.CreateDefaultSubobject<URCCoreComponent>(this, TEXT("RCCoreComponent"));
 }
 
 void ARCCharacter::BeginPlay()
@@ -41,10 +44,25 @@ void ARCCharacter::BeginPlay()
   // Only do this once, on either server or standalone client
   if (URCAbilitySystemComponent* ASC = GetRCAbilitySystemComponent())
   {
-    // OwnerActor = PlayerState, AvatarActor = this Character
-    ASC->InitAbilityActorInfo(CastChecked<ARCPlayerState>(GetPlayerState()), this);
-    HealthComponent->InitializeWithAbilitySystem(ASC);
-
+      // OwnerActor = PlayerState, AvatarActor = this Character
+      ASC->InitAbilityActorInfo(CastChecked<ARCPlayerState>(GetPlayerState()), this);
+      
+      HealthComponent->InitializeWithAbilitySystem(ASC);
+      {
+         const float Curr = HealthComponent->GetHealth();
+         const float Max  = HealthComponent->GetMaxHealth();
+         HealthComponent->OnMaxHealthChanged.Broadcast(HealthComponent, Max, Max, nullptr);
+         HealthComponent->OnHealthChanged  .Broadcast(HealthComponent, Curr, Curr, nullptr);
+      }
+      
+      CoreComponent->InitializeWithAbilitySystem(ASC);
+      {
+         const float Curr = CoreComponent->GetMana();
+         const float Max  = CoreComponent->GetMaxMana();
+         CoreComponent->OnMaxManaChanged.Broadcast(CoreComponent, Max, Max, nullptr);
+         CoreComponent->OnManaChanged  .Broadcast(CoreComponent, Curr, Curr, nullptr);
+      }
+      
     // Grant default set of abilities & init-effects (Death, Reset, etc)
     //if (DefaultAbilitySet)
     //{
@@ -52,10 +70,7 @@ void ARCCharacter::BeginPlay()
     //}
 
     // Seed any UI with the current health values
-    const float Curr = HealthComponent->GetHealth();
-    const float Max  = HealthComponent->GetMaxHealth();
-    HealthComponent->OnMaxHealthChanged.Broadcast(HealthComponent, Max, Max, nullptr);
-    HealthComponent->OnHealthChanged  .Broadcast(HealthComponent, Curr, Curr, nullptr);
+    
   }
 }
 
@@ -121,17 +136,22 @@ void ARCCharacter::OnRep_PlayerState()
   if (URCAbilitySystemComponent* ASC = GetRCAbilitySystemComponent())
   {
     ASC->InitAbilityActorInfo(CastChecked<ARCPlayerState>(GetPlayerState()), this);
-    HealthComponent->InitializeWithAbilitySystem(ASC);
-    //if (DefaultAbilitySet)
-    //{
-    //  ASC->AddAbilitySet(DefaultAbilitySet);
-    //}
-
-    // Re‐seed UI on clients
-    const float Curr = HealthComponent->GetHealth();
-    const float Max  = HealthComponent->GetMaxHealth();
-    HealthComponent->OnMaxHealthChanged.Broadcast(HealthComponent, Max, Max, nullptr);
-    HealthComponent->OnHealthChanged.Broadcast(HealthComponent, Curr, Curr, nullptr);
+      
+      HealthComponent->InitializeWithAbilitySystem(ASC);
+      {
+         const float Curr = HealthComponent->GetHealth();
+         const float Max  = HealthComponent->GetMaxHealth();
+         HealthComponent->OnMaxHealthChanged.Broadcast(HealthComponent, Max, Max, nullptr);
+         HealthComponent->OnHealthChanged  .Broadcast(HealthComponent, Curr, Curr, nullptr);
+      }
+      
+      CoreComponent->InitializeWithAbilitySystem(ASC);
+      {
+         const float Curr = CoreComponent->GetMana();
+         const float Max  = CoreComponent->GetMaxMana();
+         CoreComponent->OnMaxManaChanged.Broadcast(CoreComponent, Max, Max, nullptr);
+         CoreComponent->OnManaChanged  .Broadcast(CoreComponent, Curr, Curr, nullptr);
+      }
   }
 
   OnAbilitySystemInitialized();

@@ -36,14 +36,17 @@ namespace RCGameplayTags
     UE_DEFINE_GAMEPLAY_TAG_COMMENT(InitState_DataInitialized, "InitState.DataInitialized", "3: The available data has been initialized for this actor/component, but it is not ready for full gameplay");
     UE_DEFINE_GAMEPLAY_TAG_COMMENT(InitState_GameplayReady, "InitState.GameplayReady", "4: The actor/component is fully ready for active gameplay");
 
+    UE_DEFINE_GAMEPLAY_TAG_COMMENT(Status_Death,       "Status.Death",       "Actor is dead.");
+    UE_DEFINE_GAMEPLAY_TAG_COMMENT(Status_Death_Dying, "Status.Death.Dying", "Actor is dying.");
+    UE_DEFINE_GAMEPLAY_TAG_COMMENT(Status_Death_Dead,  "Status.Death.Dead",  "Actor is fully dead.");
+
+
     UE_DEFINE_GAMEPLAY_TAG_COMMENT(GameplayEvent_Death, "GameplayEvent.Death", "Event that fires on death. This event only fires on the server.");
     UE_DEFINE_GAMEPLAY_TAG_COMMENT(GameplayEvent_Reset, "GameplayEvent.Reset", "Event that fires once a player reset is executed.");
     UE_DEFINE_GAMEPLAY_TAG_COMMENT(GameplayEvent_RequestReset, "GameplayEvent.RequestReset", "Event to request a player's pawn to be instantly replaced with a new one at a valid spawn location.");
 
-
-    UE_DEFINE_GAMEPLAY_TAG_COMMENT(Status_Death,       "Status.Death",       "Actor is dead.");
-    UE_DEFINE_GAMEPLAY_TAG_COMMENT(Status_Death_Dying, "Status.Death.Dying", "Actor is dying.");
-    UE_DEFINE_GAMEPLAY_TAG_COMMENT(Status_Death_Dead,  "Status.Death.Dead",  "Actor is fully dead.");
+    UE_DEFINE_GAMEPLAY_TAG_COMMENT(GameplayEvent_Mana_Empty, "GameplayEvent.Mana.Empty", "Event that fires once player mana is empty.");
+    UE_DEFINE_GAMEPLAY_TAG_COMMENT(GameplayEvent_Mana_Restored, "GameplayEvent.Mana.Restored", "Event that fires once player mana is restored.");
 
     // These are mapped to the movement modes inside GetMovementModeTagMap()
     UE_DEFINE_GAMEPLAY_TAG_COMMENT(Movement_Mode_Walking, "Movement.Mode.Walking", "Default Character movement tag");

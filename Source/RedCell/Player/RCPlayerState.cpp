@@ -4,6 +4,7 @@
 
 #include "AbilitySystem/Attributes/RCHealthSet.h"
 #include "AbilitySystem/Attributes/RCCombatSet.h"
+#include "AbilitySystem/Attributes/RCCoreSet.h"
 #include "AbilitySystem/RCAbilitySet.h"
 #include "AbilitySystem/RCAbilitySystemComponent.h"
 #include "Character/RCPawnData.h"
@@ -37,6 +38,7 @@ ARCPlayerState::ARCPlayerState(const FObjectInitializer& ObjectInitializer)
     // 2) Create the HealthSet
     HealthSet = CreateDefaultSubobject<URCHealthSet>(TEXT("HealthSet"));
     CombatSet = CreateDefaultSubobject<URCCombatSet>(TEXT("CombatSet"));
+    CoreSet   = CreateDefaultSubobject<URCCoreSet>(TEXT("CoreSet"));
     
     // 3) Tell the ASC
     AbilitySystemComponent->AddAttributeSetSubobject(HealthSet.Get());

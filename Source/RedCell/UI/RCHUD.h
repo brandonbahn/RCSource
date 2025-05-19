@@ -17,15 +17,15 @@ public:
   ARCHUD();
 
   /**
-   * Designer picks your Health Bar widget here
-   * (and later you can add StaminaBarClass, ManaBarClass, etc.)
+   * Select default player HUD widget
+   * (need to add StaminaBarClass, ManaBarClass, XPBarClass, etc.)
    */
   UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="UI")
-  TSubclassOf<UUserWidget> HealthBarWidgetClass;
+  TSubclassOf<UUserWidget> PlayerHUD_WidgetClass;
 
   /** Optional hook if designers want to do extra Blueprint logic */
   UFUNCTION(BlueprintImplementableEvent, Category="UI")
-  void BP_OnHealthBarCreated(UUserWidget* HealthBar);
+  void OnPlayerHUDCreated(UUserWidget* PlayerHUD);
     
     // *** Whenever add StaminaBar, ManaBar, etc. *** //
     
@@ -41,5 +41,5 @@ protected:
 private:
   /** Keep reference so we can unbind or remove if needed */
   UPROPERTY()
-  UUserWidget* HealthBarWidget;
+  UUserWidget* PlayerHUDWidget;
 };

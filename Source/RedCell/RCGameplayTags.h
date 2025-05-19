@@ -51,6 +51,9 @@ namespace RCGameplayTags
     UE_DECLARE_GAMEPLAY_TAG_EXTERN(GameplayEvent_Reset);
     UE_DECLARE_GAMEPLAY_TAG_EXTERN(GameplayEvent_RequestReset);
 
+    UE_DECLARE_GAMEPLAY_TAG_EXTERN(GameplayEvent_Mana_Empty);
+    UE_DECLARE_GAMEPLAY_TAG_EXTERN(GameplayEvent_Mana_Restored);
+
     // …add any more tags here…
 
     /** Optional runtime lookup helper */

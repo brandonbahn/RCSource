@@ -9,6 +9,7 @@
 #include "GameplayTagAssetInterface.h"
 #include "Player/RCPlayerState.h"
 #include "Character/RCHealthComponent.h"
+#include "Character/RCCoreComponent.h"
 #include "AbilitySystem/RCAbilitySet.h"
 #include "AbilitySystem/RCAbilitySystemComponent.h"  // ← new include
 #include "Character/RCPawnData.h"
@@ -27,6 +28,7 @@ class UAbilitySystemComponent;
 class UInputComponent;
 class URCAbilitySystemComponent;
 class URCHealthComponent;
+class URCCoreComponent;
 class URCPawnExtensionComponent;
 class UObject;
 struct FFrame;
@@ -47,123 +49,132 @@ class REDCELL_API ARCCharacter
   , public IAbilitySystemInterface
   , public IGameplayTagAssetInterface
 {
-  GENERATED_BODY()
-
-
+    GENERATED_BODY()
+    
+    
 public:
-  ARCCharacter(const FObjectInitializer& ObjInit = FObjectInitializer::Get());
+    ARCCharacter(const FObjectInitializer& ObjInit = FObjectInitializer::Get());
     
-  UFUNCTION(BlueprintCallable, Category = "RedCell|Character")
-  ARCPlayerController* GetRCPlayerController() const;
-
-  UFUNCTION(BlueprintCallable, Category = "RedCell|Character")
-  ARCPlayerState* GetRCPlayerState() const;
-
-  UFUNCTION(BlueprintCallable, Category = "RedCell|Character")
-  URCAbilitySystemComponent* GetRCAbilitySystemComponent() const;
-  virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override;
+    UFUNCTION(BlueprintCallable, Category = "RedCell|Character")
+    ARCPlayerController* GetRCPlayerController() const;
     
-  virtual void GetOwnedGameplayTags(FGameplayTagContainer& TagContainer) const override;
-  virtual bool HasMatchingGameplayTag(FGameplayTag TagToCheck) const override;
-  virtual bool HasAllMatchingGameplayTags(const FGameplayTagContainer& TagContainer) const override;
-  virtual bool HasAnyMatchingGameplayTags(const FGameplayTagContainer& TagContainer) const override;
+    UFUNCTION(BlueprintCallable, Category = "RedCell|Character")
+    ARCPlayerState* GetRCPlayerState() const;
     
-  UFUNCTION(BlueprintCallable, Category="Tags")
-  void NotifyAllMovementTags(
-     E_MovementMode      MovementMode,
-     E_Gait              Gait,
-     E_MovementState     MovementState,
-     E_RotationMode      RotationMode,
-     E_Stance            Stance,
-     E_MovementDirection MovementDirection);
-
-  /*
-  // IAbilitySystemInterface
-  virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override;
-  
-
-   * Blueprint‐friendly getter that returns the RC subclass,
-   * so you never have to cast in Blueprint./
-  UFUNCTION(BlueprintCallable, Category="RedCell|Abilities")
-  URCAbilitySystemComponent* GetRCAbilitySystemComponent() const;
+    UFUNCTION(BlueprintCallable, Category = "RedCell|Character")
+    URCAbilitySystemComponent* GetRCAbilitySystemComponent() const;
+    virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override;
     
-  
-  UFUNCTION(BlueprintImplementableEvent, Category="Abilities")
-  void OnAbilitySystemInitialized();
-  */
-
-  /** Blueprint‐callable accessor for GetHealthComponent */
-  UFUNCTION(BlueprintCallable, Category="RedCell|Health")
-  URCHealthComponent* GetHealthComponent() const { return HealthComponent; }
-
-  // The PawnData Asset this Pawn will initialize itself from
-  UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="RedCell|Pawn")
-  TObjectPtr<URCPawnData> PawnDataAsset;
-  
-/*
-  UFUNCTION(BlueprintCallable, Category="RedCell|Pawn")
-  void InitializeFromPawnData(URCPawnData* PawnData);
-*/
-
+    virtual void GetOwnedGameplayTags(FGameplayTagContainer& TagContainer) const override;
+    virtual bool HasMatchingGameplayTag(FGameplayTag TagToCheck) const override;
+    virtual bool HasAllMatchingGameplayTags(const FGameplayTagContainer& TagContainer) const override;
+    virtual bool HasAnyMatchingGameplayTags(const FGameplayTagContainer& TagContainer) const override;
+    
+    UFUNCTION(BlueprintCallable, Category="Tags")
+    void NotifyAllMovementTags(
+                               E_MovementMode      MovementMode,
+                               E_Gait              Gait,
+                               E_MovementState     MovementState,
+                               E_RotationMode      RotationMode,
+                               E_Stance            Stance,
+                               E_MovementDirection MovementDirection);
+    
+    /*
+     // IAbilitySystemInterface
+     virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override;
+     
+     
+     * Blueprint‐friendly getter that returns the RC subclass,
+     * so you never have to cast in Blueprint./
+     UFUNCTION(BlueprintCallable, Category="RedCell|Abilities")
+     URCAbilitySystemComponent* GetRCAbilitySystemComponent() const;
+     
+     
+     UFUNCTION(BlueprintImplementableEvent, Category="Abilities")
+     void OnAbilitySystemInitialized();
+     */
+    
+    /** Blueprint‐callable accessor for GetHealthComponent */
+    UFUNCTION(BlueprintCallable, Category="RedCell|Health")
+    URCHealthComponent* GetHealthComponent() const { return HealthComponent; }
+    
+    /** Blueprint‐callable accessor for GetCoreComponent */
+    UFUNCTION(BlueprintCallable, Category="RedCell|Core")
+    URCCoreComponent* GetCoreComponent() const { return CoreComponent; }
+    
+    // The PawnData Asset this Pawn will initialize itself from
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="RedCell|Pawn")
+    TObjectPtr<URCPawnData> PawnDataAsset;
+    
+    /*
+     UFUNCTION(BlueprintCallable, Category="RedCell|Pawn")
+     void InitializeFromPawnData(URCPawnData* PawnData);
+     */
+    
 protected:
-
-  virtual void OnAbilitySystemInitialized();
-  virtual void OnAbilitySystemUninitialized();
-
-  virtual void PossessedBy(AController* NewController) override;
-  virtual void UnPossessed() override;
-
-  virtual void OnRep_Controller() override;
-  virtual void OnRep_PlayerState() override;
     
-  virtual void SetupPlayerInputComponent(UInputComponent* PlayerInputComponent) override;
+    virtual void OnAbilitySystemInitialized();
+    virtual void OnAbilitySystemUninitialized();
     
-  void InitializeGameplayTags();
+    virtual void PossessedBy(AController* NewController) override;
+    virtual void UnPossessed() override;
     
-  virtual void FellOutOfWorld(const class UDamageType& dmgType) override;
+    virtual void OnRep_Controller() override;
+    virtual void OnRep_PlayerState() override;
     
-  // Begins the death sequence for the character (disables collision, disables movement, etc...)
-  UFUNCTION()
-  virtual void OnDeathStarted(AActor* OwningActor);
+    virtual void SetupPlayerInputComponent(UInputComponent* PlayerInputComponent) override;
     
-  // Ends the death sequence for the character (detaches controller, destroys pawn, etc...)
-  UFUNCTION()
-  virtual void OnDeathFinished(AActor* OwningActor);
+    void InitializeGameplayTags();
     
-  void DisableMovementAndCollision();
-  void DestroyDueToDeath();
-  void UninitAndDestroy();
+    virtual void FellOutOfWorld(const class UDamageType& dmgType) override;
     
+    // Begins the death sequence for the character (disables collision, disables movement, etc...)
+    UFUNCTION()
+    virtual void OnDeathStarted(AActor* OwningActor);
     
-   /** Simple default team ID (everyone is on team 0) */
-   UPROPERTY()
-   uint8 MyTeamID = 0;
+    // Ends the death sequence for the character (detaches controller, destroys pawn, etc...)
+    UFUNCTION()
+    virtual void OnDeathFinished(AActor* OwningActor);
+    
+    void DisableMovementAndCollision();
+    void DestroyDueToDeath();
+    void UninitAndDestroy();
     
     
+    /** Simple default team ID (everyone is on team 0) */
+    UPROPERTY()
+    uint8 MyTeamID = 0;
     
-  // Called when the death sequence for the character has completed
-  UFUNCTION(BlueprintImplementableEvent, meta=(DisplayName="OnDeathFinished"))
-  void K2_OnDeathFinished();
     
-  // Declare this so BeginPlay() in .cpp actually matches
-  virtual void BeginPlay() override;
-
-  /** Which AbilitySet to grant on spawn (Death, Reset, etc) */
-  //UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Abilities")
-  //URCAbilitySet* DefaultAbilitySet;
     
- 
-
-
+    // Called when the death sequence for the character has completed
+    UFUNCTION(BlueprintImplementableEvent, meta=(DisplayName="OnDeathFinished"))
+    void K2_OnDeathFinished();
+    
+    // Declare this so BeginPlay() in .cpp actually matches
+    virtual void BeginPlay() override;
+    
+    /** Which AbilitySet to grant on spawn (Death, Reset, etc) */
+    //UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Abilities")
+    //URCAbilitySet* DefaultAbilitySet;
+    
+    
+    
+    
 private:
     
-  UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "RedCell|Pawn", meta=(AllowPrivateAccess="true"))
-  TObjectPtr<URCPawnExtensionComponent> PawnExtensionComponent;
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "RedCell|Pawn", meta=(AllowPrivateAccess="true"))
+    TObjectPtr<URCPawnExtensionComponent> PawnExtensionComponent;
     
-  UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "RedCell|Pawn", meta=(AllowPrivateAccess="true"))
-  TObjectPtr<URCHeroComponent> HeroComponent;
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "RedCell|Hero", meta=(AllowPrivateAccess="true"))
+    TObjectPtr<URCHeroComponent> HeroComponent;
     
-  /** The pure C++ health component that binds to the ASC */
-  UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="RedCell|Health", meta=(DisplayName="Health Component", AllowPrivateAccess="true"))
-  URCHealthComponent* HealthComponent;
+    /** The pure C++ health component that binds to the ASC */
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="RedCell|Health", meta=(DisplayName="Health Component", AllowPrivateAccess="true"))
+    URCHealthComponent* HealthComponent;
+    
+    /** The pure C++ health component that binds to the ASC */
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="RedCell|Core", meta=(DisplayName="Core Component", AllowPrivateAccess="true"))
+    URCCoreComponent* CoreComponent;
+    
 };

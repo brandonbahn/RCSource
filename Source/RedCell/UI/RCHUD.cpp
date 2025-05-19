@@ -36,12 +36,12 @@ void ARCHUD::BeginPlay()
 
   // …and later, when you add Stamina/Mana, just repeat the pattern:
   // if (StaminaBarWidgetClass) { … CreateWidget → AddToViewport → BP_OnStaminaBarCreated(…) }
-    if (HealthBarWidgetClass)
+    if (PlayerHUD_WidgetClass)
       {
         // 1) create the widget instance
-        HealthBarWidget = CreateWidget<UUserWidget>(GetWorld(), HealthBarWidgetClass);
+        PlayerHUDWidget = CreateWidget<UUserWidget>(GetWorld(), PlayerHUD_WidgetClass);
 
         // 2) hand it off to Blueprint so we can call Add Widget for Player there
-        BP_OnHealthBarCreated(HealthBarWidget);
+        OnPlayerHUDCreated(PlayerHUDWidget);
       }
 }

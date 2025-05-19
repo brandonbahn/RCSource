@@ -106,8 +106,12 @@ private:
     UPROPERTY()
     TObjectPtr<URCHealthSet> HealthSet;
     
-    //***Combat attribute set used by this actor once set-up***//
+    // Combat attribute set used by this actor.
     UPROPERTY()
     TObjectPtr<const class URCCombatSet> CombatSet;
+    
+    // Core attribute set used by this actor.
+    UPROPERTY()
+    TObjectPtr<URCCoreSet> CoreSet;
     
 };
