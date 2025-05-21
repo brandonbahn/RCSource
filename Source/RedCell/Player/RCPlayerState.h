@@ -7,6 +7,7 @@
 #include "AbilitySystemInterface.h"
 #include "AbilitySystem/RCAbilitySystemComponent.h"
 #include "AbilitySystem/Attributes/RCHealthSet.h"
+#include "AbilitySystem/Attributes/RCCoreSet.h"
 #include "AbilitySystem/RCAbilitySet.h"
 #include "RCPlayerState.generated.h"
 

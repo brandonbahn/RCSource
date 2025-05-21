@@ -26,6 +26,7 @@ public class RedCell : ModuleRules
         PublicDependencyModuleNames.AddRange(
             new string[] {
                 "Core",
+                "CoreOnline",
                 "CoreUObject",
                 "Engine",
                 "PhysicsCore",
@@ -37,7 +38,9 @@ public class RedCell : ModuleRules
                 "ModularGameplayActors",
                 "UMG",
                 "CommonLoadingScreen",
+                "Niagara",
                 "GameFeatures",
+                "AsyncMixin",
                 // if using GAS:
                 // "GameplayAbilities",
                 // "GameplayTags",
@@ -48,16 +51,20 @@ public class RedCell : ModuleRules
         PrivateDependencyModuleNames.AddRange(
             new string[] {
                 // e.g. "Slate", "SlateCore" if you need them
+                "InputCore",
                 "Slate",           // Lyra has these
                 "SlateCore",       // in its PrivateDependencies
                 "EnhancedInput",
                 "NetCore",
+                "DeveloperSettings",
                 "CommonUI",
                 "CommonInput",     // needed by the CommonUI ScaleBox slot
                 "CommonGame",
                 "CommonUser",
+                "GameplayMessageRuntime",
                 "UIExtension",
                 "AudioModulation",
+                "EngineSettings",
             }
         );
         

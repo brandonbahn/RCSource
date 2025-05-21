@@ -14,6 +14,8 @@
 #include "AbilitySystemGlobals.h"
 #include "AbilitySystem/RCAbilitySourceInterface.h"
 #include "AbilitySystem/RCGameplayEffectContext.h"
+#include "Physics/PhysicalMaterialWithTags.h"
+#include "GameFramework/GameplayMessageSubsystem.h"
 #include "GameFramework/PlayerState.h"
 #include "GameplayTagContainer.h"
 
