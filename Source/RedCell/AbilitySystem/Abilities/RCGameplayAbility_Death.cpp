@@ -3,7 +3,10 @@
 
 #include "AbilitySystem/Abilities/RCGameplayAbility_Death.h"
 #include "AbilitySystem/RCAbilitySystemComponent.h"
+#include "Character/RCHealthComponent.h"
 #include "Engine/Engine.h"
+#include "RCLogChannels.h"
+#include "Trace/Trace.inl"
 #include "RCGameplayTags.h"
 
 

@@ -2,11 +2,15 @@
 
 #include "AbilitySystem/Abilities/RCGameplayAbility_Reset.h"
 #include "AbilitySystem/RCAbilitySystemComponent.h"
+#include "Character/RCCharacter.h"
+#include "GameFramework/GameplayMessageSubsystem.h"
 #include "RCGameplayTags.h"
 #include "GameFramework/Pawn.h"
 #include "GameFramework/GameModeBase.h"
 #include "Engine/Engine.h"
 #include "GameFramework/PlayerController.h"
+
+#include UE_INLINE_GENERATED_CPP_BY_NAME(RCGameplayAbility_Reset)
 
 URCGameplayAbility_Reset::URCGameplayAbility_Reset(const FObjectInitializer& ObjInit)
   : Super(ObjInit)
@@ -29,42 +33,34 @@ void URCGameplayAbility_Reset::ActivateAbility(
     const FGameplayAbilityActivationInfo ActivationInfo,
     const FGameplayEventData* TriggerEventData)
 {
-    // --- DEBUG ---
-    APawn* AvatarPawn = Cast<APawn>(GetAvatarActorFromActorInfo());
-    const FString AvatarName = AvatarPawn ? AvatarPawn->GetName() : TEXT("NonePawn");
-    UE_LOG(LogTemp, Warning, TEXT("[ResetAbility] ActivateAbility on %s"), *AvatarName);
+    check(ActorInfo);
 
-    if (AvatarPawn)
-    {
-        if (APlayerController* PC = Cast<APlayerController>(AvatarPawn->GetController()))
-        {
-            PC->ClientMessage(TEXT("ResetAbility Activated"), NAME_None, 5.f);
-        }
-    }
-    // --- END DEBUG ---
+    URCAbilitySystemComponent* RCASC = CastChecked<URCAbilitySystemComponent>(ActorInfo->AbilitySystemComponent.Get());
 
-    // Actual reset logic: use the pawn’s controller
-    if (AvatarPawn)
+    FGameplayTagContainer AbilityTypesToIgnore;
+    AbilityTypesToIgnore.AddTag(RCGameplayTags::Ability_Behavior_SurvivesDeath);
+
+    // Cancel all abilities and block others from starting.
+    RCASC->CancelAbilities(nullptr, &AbilityTypesToIgnore, this);
+
+    SetCanBeCanceled(false);
+
+    // Execute the reset from the character
+    if (ARCCharacter* RCChar = Cast<ARCCharacter>(CurrentActorInfo->AvatarActor.Get()))
     {
-        if (AController* C = AvatarPawn->GetController())
-        {
-            if (AGameModeBase* GM = GetWorld()->GetAuthGameMode<AGameModeBase>())
-            {
-                GM->RestartPlayer(C);
-            }
-        }
+        RCChar->Reset();
     }
+
+    // Let others know a reset has occurred
+    FRCPlayerResetMessage Message;
+    Message.OwnerPlayerState = CurrentActorInfo->OwnerActor.Get();
+    UGameplayMessageSubsystem& MessageSystem = UGameplayMessageSubsystem::Get(this);
+    MessageSystem.BroadcastMessage(RCGameplayTags::GameplayEvent_Reset, Message);
 
     Super::ActivateAbility(Handle, ActorInfo, ActivationInfo, TriggerEventData);
-    EndAbility(Handle, ActorInfo, ActivationInfo, /*bReplicateEndAbility=*/true, /*bWasCancelled=*/false);
+
+    const bool bReplicateEndAbility = true;
+    const bool bWasCanceled = false;
+    EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, bReplicateEndAbility, bWasCanceled);
 }
 
-void URCGameplayAbility_Reset::EndAbility(
-    const FGameplayAbilitySpecHandle Handle,
-    const FGameplayAbilityActorInfo* ActorInfo,
-    const FGameplayAbilityActivationInfo ActivationInfo,
-    bool bReplicateEndAbility,
-    bool bWasCancelled)
-{
-    Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
-}

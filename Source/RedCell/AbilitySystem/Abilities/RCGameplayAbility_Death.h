@@ -6,11 +6,17 @@
 #include "AbilitySystem/Abilities/RCGameplayAbility.h"
 #include "RCGameplayAbility_Death.generated.h"
 
+class UObject;
+struct FFrame;
+struct FGameplayAbilityActorInfo;
+struct FGameplayEventData;
+
 /**
- * 
+*   Gameplay ability used for handling death.
+ *	Ability is activated automatically via the "GameplayEvent.Death" ability trigger tag.
  */
 UCLASS()
-class REDCELL_API URCGameplayAbility_Death : public URCGameplayAbility
+class URCGameplayAbility_Death : public URCGameplayAbility
 {
     GENERATED_BODY()
 

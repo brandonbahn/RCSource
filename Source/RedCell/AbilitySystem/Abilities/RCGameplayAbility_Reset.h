@@ -6,6 +6,17 @@
 #include "AbilitySystem/Abilities/RCGameplayAbility.h"
 #include "RCGameplayAbility_Reset.generated.h"
 
+class AActor;
+class UObject;
+struct FGameplayAbilityActorInfo;
+struct FGameplayEventData;
+
+/**
+ * URCGameplayAbility_Reset
+ *
+ *	Gameplay ability used for handling quickly resetting the player back to initial spawn state.
+ *	Ability is activated automatically via the "GameplayEvent.RequestReset" ability trigger tag (server only).
+ */
 UCLASS()
 class REDCELL_API URCGameplayAbility_Reset : public URCGameplayAbility
 {
@@ -20,12 +31,13 @@ protected:
         const FGameplayAbilityActorInfo* ActorInfo,
         const FGameplayAbilityActivationInfo ActivationInfo,
         const FGameplayEventData* TriggerEventData) override;
+};
 
-    /** Optionally clean up or notify after reset */
-    virtual void EndAbility(
-        const FGameplayAbilitySpecHandle Handle,
-        const FGameplayAbilityActorInfo* ActorInfo,
-        const FGameplayAbilityActivationInfo ActivationInfo,
-        bool bReplicateEndAbility,
-        bool bWasCancelled) override;
+USTRUCT(BlueprintType)
+struct FRCPlayerResetMessage
+{
+    GENERATED_BODY()
+
+    UPROPERTY(BlueprintReadOnly)
+    TObjectPtr<AActor> OwnerPlayerState = nullptr;
 };

@@ -9,17 +9,33 @@
 #include "Player/RCPlayerController.h"
 #include "Character/RCCharacter.h"
 #include "RCGameplayTags.h"
+#include "NativeGameplayTags.h"
+#include "RCAbilityCost.h"
 #include "Character/RCHeroComponent.h"
 #include "AbilitySystemBlueprintLibrary.h"
 #include "AbilitySystemGlobals.h"
+#include "RCAbilitySimpleFailureMessage.h"
+#include "GameFramework/GameplayMessageSubsystem.h"
 #include "AbilitySystem/RCAbilitySourceInterface.h"
 #include "AbilitySystem/RCGameplayEffectContext.h"
 #include "Physics/PhysicalMaterialWithTags.h"
-#include "GameFramework/GameplayMessageSubsystem.h"
 #include "GameFramework/PlayerState.h"
 #include "GameplayTagContainer.h"
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(RCGameplayAbility)
+
+#define ENSURE_ABILITY_IS_INSTANTIATED_OR_RETURN(FunctionName, ReturnValue)																				\
+{																																						\
+if (!ensure(IsInstantiated()))																														\
+{																																					\
+ABILITY_LOG(Error, TEXT("%s: " #FunctionName " cannot be called on a non-instanced ability. Check the instancing policy."), *GetPathName());	\
+return ReturnValue;																																\
+}																																					\
+}
+
+UE_DEFINE_GAMEPLAY_TAG(TAG_ABILITY_SIMPLE_FAILURE_MESSAGE, "Ability.UserFacingSimpleActivateFail.Message");
+UE_DEFINE_GAMEPLAY_TAG(TAG_ABILITY_PLAY_MONTAGE_FAILURE_MESSAGE, "Ability.PlayMontageOnActivateFail.Message");
+
 
 URCGameplayAbility::URCGameplayAbility(const FObjectInitializer& ObjInit)
 : Super(ObjInit)
@@ -82,6 +98,41 @@ URCHeroComponent* URCGameplayAbility::GetHeroComponentFromActorInfo() const
 {
     return (CurrentActorInfo ? URCHeroComponent::FindHeroComponent(CurrentActorInfo->AvatarActor.Get()) : nullptr);
 }
+
+void URCGameplayAbility::NativeOnAbilityFailedToActivate(const FGameplayTagContainer& FailedReason) const
+{
+    bool bSimpleFailureFound = false;
+    for (FGameplayTag Reason : FailedReason)
+    {
+        if (!bSimpleFailureFound)
+        {
+            if (const FText* pUserFacingMessage = FailureTagToUserFacingMessages.Find(Reason))
+            {
+                FRCAbilitySimpleFailureMessage Message;
+                Message.PlayerController = GetActorInfo().PlayerController.Get();
+                Message.FailureTags = FailedReason;
+                Message.UserFacingReason = *pUserFacingMessage;
+
+                UGameplayMessageSubsystem& MessageSystem = UGameplayMessageSubsystem::Get(GetWorld());
+                MessageSystem.BroadcastMessage(TAG_ABILITY_SIMPLE_FAILURE_MESSAGE, Message);
+                bSimpleFailureFound = true;
+            }
+        }
+		
+        if (UAnimMontage* pMontage = FailureTagToAnimMontage.FindRef(Reason))
+        {
+            FRCAbilityMontageFailureMessage Message;
+            Message.PlayerController = GetActorInfo().PlayerController.Get();
+            Message.AvatarActor = GetActorInfo().AvatarActor.Get();
+            Message.FailureTags = FailedReason;
+            Message.FailureMontage = pMontage;
+
+            UGameplayMessageSubsystem& MessageSystem = UGameplayMessageSubsystem::Get(GetWorld());
+            MessageSystem.BroadcastMessage(TAG_ABILITY_PLAY_MONTAGE_FAILURE_MESSAGE, Message);
+        }
+    }
+}
+
 
 bool URCGameplayAbility::CanActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayTagContainer* SourceTags, const FGameplayTagContainer* TargetTags, FGameplayTagContainer* OptionalRelevantTags) const
 {
@@ -164,7 +215,82 @@ void URCGameplayAbility::EndAbility(const FGameplayAbilitySpecHandle Handle, con
     Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
 }
 
-//* Ability Cost would be applied here!!!! *//
+bool URCGameplayAbility::CheckCost(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, OUT FGameplayTagContainer* OptionalRelevantTags) const
+{
+	if (!Super::CheckCost(Handle, ActorInfo, OptionalRelevantTags) || !ActorInfo)
+	{
+		return false;
+	}
+
+	// Verify we can afford any additional costs
+	for (const TObjectPtr<URCAbilityCost>& AdditionalCost : AdditionalCosts)
+	{
+		if (AdditionalCost != nullptr)
+		{
+			if (!AdditionalCost->CheckCost(this, Handle, ActorInfo, /*inout*/ OptionalRelevantTags))
+			{
+				return false;
+			}
+		}
+	}
+
+	return true;
+}
+
+void URCGameplayAbility::ApplyCost(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo) const
+{
+	Super::ApplyCost(Handle, ActorInfo, ActivationInfo);
+
+	check(ActorInfo);
+
+	// Used to determine if the ability actually hit a target (as some costs are only spent on successful attempts)
+	auto DetermineIfAbilityHitTarget = [&]()
+	{
+		if (ActorInfo->IsNetAuthority())
+		{
+			if (URCAbilitySystemComponent* ASC = Cast<URCAbilitySystemComponent>(ActorInfo->AbilitySystemComponent.Get()))
+			{
+				FGameplayAbilityTargetDataHandle TargetData;
+				ASC->GetAbilityTargetData(Handle, ActivationInfo, TargetData);
+				for (int32 TargetDataIdx = 0; TargetDataIdx < TargetData.Data.Num(); ++TargetDataIdx)
+				{
+					if (UAbilitySystemBlueprintLibrary::TargetDataHasHitResult(TargetData, TargetDataIdx))
+					{
+						return true;
+					}
+				}
+			}
+		}
+
+		return false;
+	};
+
+	// Pay any additional costs
+	bool bAbilityHitTarget = false;
+	bool bHasDeterminedIfAbilityHitTarget = false;
+	for (const TObjectPtr<URCAbilityCost>& AdditionalCost : AdditionalCosts)
+	{
+		if (AdditionalCost != nullptr)
+		{
+			if (AdditionalCost->ShouldOnlyApplyCostOnHit())
+			{
+				if (!bHasDeterminedIfAbilityHitTarget)
+				{
+					bAbilityHitTarget = DetermineIfAbilityHitTarget();
+					bHasDeterminedIfAbilityHitTarget = true;
+				}
+
+				if (!bAbilityHitTarget)
+				{
+					continue;
+				}
+			}
+
+			AdditionalCost->ApplyCost(this, Handle, ActorInfo, ActivationInfo);
+		}
+	}
+}
+
 
 
 FGameplayEffectContextHandle URCGameplayAbility::MakeEffectContext(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo) const
@@ -193,7 +319,6 @@ FGameplayEffectContextHandle URCGameplayAbility::MakeEffectContext(const FGamepl
 }
 
 
-#if 0 //
 void URCGameplayAbility::ApplyAbilityTagsToGameplayEffectSpec(FGameplayEffectSpec& Spec, FGameplayAbilitySpec* AbilitySpec) const
 {
     Super::ApplyAbilityTagsToGameplayEffectSpec(Spec, AbilitySpec);
@@ -206,7 +331,6 @@ void URCGameplayAbility::ApplyAbilityTagsToGameplayEffectSpec(FGameplayEffectSpe
         }
     }
 }
-#endif //
 
 
 bool URCGameplayAbility::DoesAbilitySatisfyTagRequirements(const UAbilitySystemComponent& AbilitySystemComponent, const FGameplayTagContainer* SourceTags, const FGameplayTagContainer* TargetTags, OUT FGameplayTagContainer* OptionalRelevantTags) const
@@ -392,7 +516,7 @@ bool URCGameplayAbility::CanChangeActivationGroup(ERCAbilityActivationGroup NewG
 
 bool URCGameplayAbility::ChangeActivationGroup(ERCAbilityActivationGroup NewGroup)
 {
-    // Lyra’s “ensure instantiated” guard inlined:
+    // RC’s “ensure instantiated” guard inlined:
     if (!IsInstantiated())
     {
         UE_LOG(LogTemp, Warning,

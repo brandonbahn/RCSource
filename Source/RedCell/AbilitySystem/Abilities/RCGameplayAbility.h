@@ -18,6 +18,8 @@ class ARCPlayerController;
 class APlayerController;
 class FText;
 class IRCAbilitySourceInterface;
+class UAnimMontage;
+class URCAbilityCost;
 class URCAbilitySystemComponent;
 class URCHeroComponent;
 class UObject;
@@ -65,15 +67,39 @@ enum class ERCAbilityActivationGroup : uint8
     MAX    UMETA(Hidden)
 };
 
+/** Failure reason that can be used to play an animation montage when a failure occurs */
+USTRUCT(BlueprintType)
+struct FRCAbilityMontageFailureMessage
+{
+    GENERATED_BODY()
+
+public:
+    // Player controller that failed to activate the ability, if the AbilitySystemComponent was player owned
+    UPROPERTY(BlueprintReadWrite)
+    TObjectPtr<APlayerController> PlayerController = nullptr;
+
+    // Avatar actor that failed to activate the ability
+    UPROPERTY(BlueprintReadWrite)
+    TObjectPtr<AActor> AvatarActor = nullptr;
+
+    // All the reasons why this ability has failed
+    UPROPERTY(BlueprintReadWrite)
+    FGameplayTagContainer FailureTags;
+
+    UPROPERTY(BlueprintReadWrite)
+    TObjectPtr<UAnimMontage> FailureMontage = nullptr;
+};
+
 /**
  * URCGameplayAbility
  *
  *    The base gameplay ability class used by this project.
  */
-UCLASS()
+UCLASS(Abstract, HideCategories = Input, Meta = (ShortTooltip = "The base gameplay ability class used by this project."))
 class REDCELL_API URCGameplayAbility : public UGameplayAbility
 {
     GENERATED_BODY()
+    friend class URCAbilitySystemComponent;
 
 public:
     URCGameplayAbility(const FObjectInitializer& ObjInit = FObjectInitializer::Get());
@@ -113,25 +139,21 @@ public:
     UFUNCTION(BlueprintCallable, BlueprintPure = false, Category = "RedCell|Ability", Meta = (ExpandBoolAsExecs = "ReturnValue"))
     bool ChangeActivationGroup(ERCAbilityActivationGroup NewGroup);
     
-#if 0   // Disable failure callback until we wire up messaging
     /** Called when an ability fails to activate. */
     void OnAbilityFailedToActivate(const FGameplayTagContainer& FailedReason) const
     {
         NativeOnAbilityFailedToActivate(FailedReason);
         ScriptOnAbilityFailedToActivate(FailedReason);
     }
-#endif
 
 protected:
-
-#if 0   //
+    
     // Called when the ability fails to activate
     virtual void NativeOnAbilityFailedToActivate(const FGameplayTagContainer& FailedReason) const;
 
     // Called when the ability fails to activate
     UFUNCTION(BlueprintImplementableEvent)
     void ScriptOnAbilityFailedToActivate(const FGameplayTagContainer& FailedReason) const;
-#endif
     
     //~UGameplayAbility interface
     virtual bool CanActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayTagContainer* SourceTags, const FGameplayTagContainer* TargetTags, FGameplayTagContainer* OptionalRelevantTags) const override;
@@ -140,8 +162,10 @@ protected:
     virtual void OnRemoveAbility(const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilitySpec& Spec) override;
     virtual void ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData) override;
     virtual void EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility, bool bWasCancelled) override;
+    virtual bool CheckCost(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, OUT FGameplayTagContainer* OptionalRelevantTags = nullptr) const override;
+    virtual void ApplyCost(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo) const override;
     virtual FGameplayEffectContextHandle MakeEffectContext(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo) const override;
-    //virtual void ApplyAbilityTagsToGameplayEffectSpec(FGameplayEffectSpec& Spec, FGameplayAbilitySpec* AbilitySpec) const override;
+    virtual void ApplyAbilityTagsToGameplayEffectSpec(FGameplayEffectSpec& Spec, FGameplayAbilitySpec* AbilitySpec) const override;
     virtual bool DoesAbilitySatisfyTagRequirements(const UAbilitySystemComponent& AbilitySystemComponent, const FGameplayTagContainer* SourceTags = nullptr, const FGameplayTagContainer* TargetTags = nullptr, OUT FGameplayTagContainer* OptionalRelevantTags = nullptr) const override;
     //~End of UGameplayAbility interface
 
@@ -170,8 +194,20 @@ protected:
     // Defines the relationship between this ability activating and other abilities activating.
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "RedCell|Ability Activation")
     ERCAbilityActivationGroup ActivationGroup;
-    
+
+    // Additional costs that must be paid to activate this ability
+    UPROPERTY(EditDefaultsOnly, Instanced, Category = Costs)
+    TArray<TObjectPtr<URCAbilityCost>> AdditionalCosts;
+
     // Map of failure tags to simple error messages
     UPROPERTY(EditDefaultsOnly, Category = "Advanced")
     TMap<FGameplayTag, FText> FailureTagToUserFacingMessages;
+
+    // Map of failure tags to anim montages that should be played with them
+    UPROPERTY(EditDefaultsOnly, Category = "Advanced")
+    TMap<FGameplayTag, TObjectPtr<UAnimMontage>> FailureTagToAnimMontage;
+
+    // If true, extra information should be logged when this ability is canceled. This is temporary, used for tracking a bug.
+    UPROPERTY(EditDefaultsOnly, Category = "Advanced")
+    bool bLogCancelation;
 };

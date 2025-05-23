@@ -7,13 +7,16 @@
 
 #include "RCGameplayAbility_FromEquipment.generated.h"
 
+class URCEquipmentInstance;
+class URCInventoryItemInstance;
+
 /**
  * RCGameplayAbility_FromEquipment
  *
  * An ability granted by and associated with an equipment instance
  */
 UCLASS()
-class REDCELL_API URCGameplayAbility_FromEquipment : public URCGameplayAbility
+class URCGameplayAbility_FromEquipment : public URCGameplayAbility
 {
     GENERATED_BODY()
     
