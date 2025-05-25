@@ -54,6 +54,9 @@ namespace RCGameplayTags
     UE_DECLARE_GAMEPLAY_TAG_EXTERN(GameplayEvent_Mana_Empty);
     UE_DECLARE_GAMEPLAY_TAG_EXTERN(GameplayEvent_Mana_Restored);
 
+   UE_DECLARE_GAMEPLAY_TAG_EXTERN(SetByCaller_Damage);
+   UE_DECLARE_GAMEPLAY_TAG_EXTERN(SetByCaller_Heal);
+
     // …add any more tags here…
 
     /** Optional runtime lookup helper */

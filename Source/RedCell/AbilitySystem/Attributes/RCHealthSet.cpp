@@ -7,6 +7,8 @@
 #include "NativeGameplayTags.h"                      // for UE_DEFINE_GAMEPLAY_TAG
 #include "RCGameplayTags.h"                          // for RCGameplayTags::GameplayEvent_Death
 #include "GameplayEffectExtension.h"                 // defines FGameplayEffectModCallbackData fully
+#include "Messages/RCVerbMessage.h"
+#include "GameFramework/GameplayMessageSubsystem.h"
 #include "Net/UnrealNetwork.h"
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(RCHealthSet)

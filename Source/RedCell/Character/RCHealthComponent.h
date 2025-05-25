@@ -6,8 +6,11 @@
 #include "GameplayEffectExtension.h"    // for FOnAttributeChangeData
 #include "RCHealthComponent.generated.h"
 
+class URCHealthComponent;
+
 class URCAbilitySystemComponent;
 class URCHealthSet;
+class UObject;
 struct FOnAttributeChangeData;
 
 /** Delegate fired when death starts or finishes */
@@ -107,6 +110,8 @@ public:
 protected:
     virtual void OnUnregister() override;
     virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
+    void ClearGameplayTags();
 
     // **Plain C++** handlers, *not* UFUNCTION()
     void HandleHealthChanged(const FOnAttributeChangeData& Data);

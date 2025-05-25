@@ -2,11 +2,16 @@
 // RCHealthComponent.cpp
 
 #include "Character/RCHealthComponent.h"
-#include "AbilitySystem/RCAbilitySystemComponent.h"
-#include "AbilitySystem/Attributes/RCHealthSet.h"
+
+#include "AbilitySystem/Attributes/RCAttributeSet.h"
+#include "RCLogChannels.h"
+#include "System/RCAssetManager.h"
+#include "System/RCGameData.h"
 #include "RCGameplayTags.h"
 #include "GameplayEffectExtension.h"                    // for FOnAttributeChangeData & FGameplayEffectModCallbackData
 #include "Net/UnrealNetwork.h"
+#include "AbilitySystem/RCAbilitySystemComponent.h"
+#include "AbilitySystem/Attributes/RCHealthSet.h"
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(RCHealthComponent)
 
@@ -70,6 +75,16 @@ void URCHealthComponent::UninitializeFromAbilitySystem()
     AbilitySystemComponent = nullptr;
     HealthSet              = nullptr;
 }
+
+void URCHealthComponent::ClearGameplayTags()
+{
+    if (AbilitySystemComponent)
+    {
+        AbilitySystemComponent->SetLooseGameplayTagCount(RCGameplayTags::Status_Death_Dying, 0);
+        AbilitySystemComponent->SetLooseGameplayTagCount(RCGameplayTags::Status_Death_Dead, 0);
+    }
+}
+
 
 float URCHealthComponent::GetHealth() const
 {

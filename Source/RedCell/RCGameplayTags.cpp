@@ -48,6 +48,9 @@ namespace RCGameplayTags
     UE_DEFINE_GAMEPLAY_TAG_COMMENT(GameplayEvent_Mana_Empty, "GameplayEvent.Mana.Empty", "Event that fires once player mana is empty.");
     UE_DEFINE_GAMEPLAY_TAG_COMMENT(GameplayEvent_Mana_Restored, "GameplayEvent.Mana.Restored", "Event that fires once player mana is restored.");
 
+    UE_DEFINE_GAMEPLAY_TAG_COMMENT(SetByCaller_Damage, "SetByCaller.Damage", "SetByCaller tag used by damage gameplay effects.");
+    UE_DEFINE_GAMEPLAY_TAG_COMMENT(SetByCaller_Heal, "SetByCaller.Heal", "SetByCaller tag used by healing gameplay effects.");
+
     // These are mapped to the movement modes inside GetMovementModeTagMap()
     UE_DEFINE_GAMEPLAY_TAG_COMMENT(Movement_Mode_Walking, "Movement.Mode.Walking", "Default Character movement tag");
     UE_DEFINE_GAMEPLAY_TAG_COMMENT(Movement_Mode_NavWalking, "Movement.Mode.NavWalking", "Default Character movement tag");
