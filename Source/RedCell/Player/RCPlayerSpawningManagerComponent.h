@@ -7,59 +7,56 @@
 #include "RCPlayerSpawningManagerComponent.generated.h"
 
 class AController;
+class APlayerController;
+class APlayerState;
 class APlayerStart;
+class ARCPlayerStart;
 class AActor;
 
 /**
  * Component on GameState responsible for tracking PlayerStarts
  * and handling respawn logic.
  */
-UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
+UCLASS()
 class REDCELL_API URCPlayerSpawningManagerComponent : public UGameStateComponent
 {
     GENERATED_BODY()
 
 public:
-    URCPlayerSpawningManagerComponent(const FObjectInitializer& ObjInit = FObjectInitializer::Get());
+    URCPlayerSpawningManagerComponent(const FObjectInitializer& ObjectInitializer);
 
-    // ~ Begin UActorComponent Interface
+    /** UActorComponent */
     virtual void InitializeComponent() override;
-    virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
-    // ~ End UActorComponent Interface
-
-    /** Called by GameMode to choose a spawn point for a player */
-    AActor* ChoosePlayerStart(AController* Player);
-
-    /** Returns whether the given player controller can restart */
-    bool ControllerCanRestart(AController* Player) const;
-
-    /** Completes the restart process and notifies Blueprints */
-    void FinishRestartPlayer(AController* NewPlayer, const FRotator& StartRotation);
+    virtual void TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
+    /** ~UActorComponent */
 
 protected:
-    /** Blueprint hook for additional logic when finishing restart */
-    UFUNCTION(BlueprintImplementableEvent, meta=(DisplayName="OnFinishRestartPlayer"))
-    void K2_OnFinishRestartPlayer(AController* NewPlayer, const FRotator& StartRotation);
+    // Utility
+    APlayerStart* GetFirstRandomUnoccupiedPlayerStart(AController* Controller, const TArray<ARCPlayerStart*>& FoundStartPoints) const;
+	
+    virtual AActor* OnChoosePlayerStart(AController* Player, TArray<ARCPlayerStart*>& PlayerStarts) { return nullptr; }
+    virtual void OnFinishRestartPlayer(AController* Player, const FRotator& StartRotation) { }
 
-    /** Override to customize spawn selection logic */
-    virtual AActor* OnChoosePlayerStart(AController* Player, const TArray<APlayerStart*>& Starts) { return nullptr; }
-
-    /** Utility: pick a random unoccupied start */
-    APlayerStart* GetFirstRandomUnoccupiedPlayerStart(AController* Controller, const TArray<APlayerStart*>& Starts) const;
+    UFUNCTION(BlueprintImplementableEvent, meta=(DisplayName=OnFinishRestartPlayer))
+    void K2_OnFinishRestartPlayer(AController* Player, const FRotator& StartRotation);
 
 private:
-    /** Cache of all discovered PlayerStart actors */
+
+    /** We proxy these calls from ARCGameMode, to this component so that each experience can more easily customize the respawn system they want. */
+    AActor* ChoosePlayerStart(AController* Player);
+    bool ControllerCanRestart(AController* Player);
+    void FinishRestartPlayer(AController* NewPlayer, const FRotator& StartRotation);
+    friend class ARCGameMode;
+    /** ~ARCGameMode */
+
     UPROPERTY(Transient)
-    TArray<TWeakObjectPtr<APlayerStart>> CachedPlayerStarts;
+    TArray<TWeakObjectPtr<ARCPlayerStart>> CachedPlayerStarts;
 
-    /** Called when a new level is loaded */
+private:
     void OnLevelAdded(ULevel* InLevel, UWorld* InWorld);
-
-    /** Called whenever any actor spawns in the world */
     void HandleOnActorSpawned(AActor* SpawnedActor);
 
 #if WITH_EDITOR
-    /** PIE helper: Find the "Play From Here" PlayerStart */
-    APlayerStart* FindPlayFromHereStart(AController* Player) const;
+    APlayerStart* FindPlayFromHereStart(AController* Player);
 #endif
 };

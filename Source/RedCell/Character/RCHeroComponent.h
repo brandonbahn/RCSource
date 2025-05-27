@@ -76,6 +76,10 @@ protected:
 
 protected:
 
+    //Hero component mapping context selection - will come back later
+    //UPROPERTY(EditAnywhere)
+    //TArray<FInputMappingContextAndPriority> DefaultInputMappings;
+
     /** True when player input bindings have been applied, will never be true for non - players */
     bool bReadyToBindInputs;
     

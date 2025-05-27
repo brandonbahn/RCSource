@@ -11,6 +11,8 @@ class URCHealthComponent;
 class URCAbilitySystemComponent;
 class URCHealthSet;
 class UObject;
+struct FFrame;
+struct FGameplayEffectSpec;
 struct FOnAttributeChangeData;
 
 /** Delegate fired when death starts or finishes */
@@ -34,6 +36,11 @@ enum class ERCDeathState : uint8
     DeathFinished UMETA(DisplayName="Death Finished")
 };
 
+/**
+ * URCHealthComponent
+ *
+ *	An actor component used to handle anything related to health.
+ */
 UCLASS(Blueprintable, meta=(BlueprintSpawnableComponent))
 class REDCELL_API URCHealthComponent : public UGameFrameworkComponent
 {
@@ -76,20 +83,19 @@ public:
     ERCDeathState GetDeathState() const { return DeathState; }
 
     /** True if dead or dying */
-    UFUNCTION(BlueprintCallable, Category="RedCell|Health")
-    bool IsDeadOrDying() const { return DeathState != ERCDeathState::NotDead; }
+    UFUNCTION(BlueprintCallable, BlueprintPure = false, Category = "RedCell|Health", Meta = (ExpandBoolAsExecs = "ReturnValue"))
+    bool IsDeadOrDying() const { return (DeathState > ERCDeathState::NotDead); }
 
-    /** Begin death sequence */
-    UFUNCTION(BlueprintCallable, Category="RedCell|Health")
+    // Begins the death sequence for the owner.
     virtual void StartDeath();
 
-    /** Finish death sequence */
-    UFUNCTION(BlueprintCallable, Category="RedCell|Health")
+    // Ends the death sequence for the owner.
     virtual void FinishDeath();
 
-    /** Instantly kill */
-    UFUNCTION(BlueprintCallable, Category="RedCell|Health")
+    // Applies enough damage to kill the owner.
     virtual void DamageSelfDestruct(bool bFellOutOfWorld = false);
+
+public:
 
     /** Fired when health changes */
     UPROPERTY(BlueprintAssignable, Category="RedCell|Health")
@@ -113,17 +119,16 @@ protected:
 
     void ClearGameplayTags();
 
-    // **Plain C++** handlers, *not* UFUNCTION()
-    void HandleHealthChanged(const FOnAttributeChangeData& Data);
-    void HandleMaxHealthChanged(const FOnAttributeChangeData& Data);
-    void HandleOutOfHealth(const FOnAttributeChangeData& Data);
+    virtual void HandleHealthChanged(AActor* DamageInstigator, AActor* DamageCauser, const FGameplayEffectSpec* DamageEffectSpec, float DamageMagnitude, float OldValue, float NewValue);
+    virtual void HandleMaxHealthChanged(AActor* DamageInstigator, AActor* DamageCauser, const FGameplayEffectSpec* DamageEffectSpec, float DamageMagnitude, float OldValue, float NewValue);
+    virtual void HandleOutOfHealth(AActor* DamageInstigator, AActor* DamageCauser, const FGameplayEffectSpec* DamageEffectSpec, float DamageMagnitude, float OldValue, float NewValue);
 
     UFUNCTION()
     void OnRep_DeathState(ERCDeathState OldState);
 
-private:
+protected:
     UPROPERTY()
-    URCAbilitySystemComponent* AbilitySystemComponent;
+    TObjectPtr<URCAbilitySystemComponent> AbilitySystemComponent;
 
     // Health set used by this component.
     UPROPERTY()

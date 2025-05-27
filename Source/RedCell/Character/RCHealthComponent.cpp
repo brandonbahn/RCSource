@@ -12,16 +12,27 @@
 #include "Net/UnrealNetwork.h"
 #include "AbilitySystem/RCAbilitySystemComponent.h"
 #include "AbilitySystem/Attributes/RCHealthSet.h"
+#include "Messages/RCVerbMessage.h"
+#include "Messages/RCVerbMessageHelpers.h"
+#include "GameFramework/GameplayMessageSubsystem.h"
+#include "GameFramework/PlayerState.h"
+#include "Engine/World.h"
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(RCHealthComponent)
 
-URCHealthComponent::URCHealthComponent(const FObjectInitializer& ObjInit)
-    : Super(ObjInit)
-    , AbilitySystemComponent(nullptr)
-    , HealthSet(nullptr)
-    , DeathState(ERCDeathState::NotDead)
+UE_DEFINE_GAMEPLAY_TAG_STATIC(TAG_RedCell_Elimination_Message, "RedCell.Elimination.Message");
+
+URCHealthComponent::URCHealthComponent(const FObjectInitializer& ObjectInitializer)
+    : Super(ObjectInitializer)
 {
+    PrimaryComponentTick.bStartWithTickEnabled = false;
+    PrimaryComponentTick.bCanEverTick = false;
+
     SetIsReplicatedByDefault(true);
+
+    AbilitySystemComponent = nullptr;
+    HealthSet = nullptr;
+    DeathState = ERCDeathState::NotDead;
 }
 
 void URCHealthComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -38,42 +49,56 @@ void URCHealthComponent::OnUnregister()
 
 void URCHealthComponent::InitializeWithAbilitySystem(URCAbilitySystemComponent* InASC)
 {
-    if (!InASC || AbilitySystemComponent)
+    AActor* Owner = GetOwner();
+    check(Owner);
+
+    if (AbilitySystemComponent)
     {
+        UE_LOG(LogRC, Error, TEXT("RCHealthComponent: Health component for owner [%s] has already been initialized with an ability system."), *GetNameSafe(Owner));
         return;
     }
 
     AbilitySystemComponent = InASC;
-    HealthSet = InASC->GetSet<URCHealthSet>();
-    if (!HealthSet)
+    if (!AbilitySystemComponent)
     {
-        AbilitySystemComponent = nullptr;
+        UE_LOG(LogRC, Error, TEXT("RCHealthComponent: Cannot initialize health component for owner [%s] with NULL ability system."), *GetNameSafe(Owner));
         return;
     }
 
-    // Bind the single‑param delegates
-    InASC->GetGameplayAttributeValueChangeDelegate(URCHealthSet::GetHealthAttribute())
-        .AddUObject(this, &URCHealthComponent::HandleHealthChanged);
+    HealthSet = AbilitySystemComponent->GetSet<URCHealthSet>();
+    if (!HealthSet)
+    {
+        UE_LOG(LogRC, Error, TEXT("RCHealthComponent: Cannot initialize health component for owner [%s] with NULL health set on the ability system."), *GetNameSafe(Owner));
+        return;
+    }
 
-    InASC->GetGameplayAttributeValueChangeDelegate(URCHealthSet::GetMaxHealthAttribute())
-        .AddUObject(this, &URCHealthComponent::HandleMaxHealthChanged);
+    // Register to listen for attribute changes.
+    HealthSet->OnHealthChanged.AddUObject(this, &ThisClass::HandleHealthChanged);
+    HealthSet->OnMaxHealthChanged.AddUObject(this, &ThisClass::HandleMaxHealthChanged);
+    HealthSet->OnOutOfHealth.AddUObject(this, &ThisClass::HandleOutOfHealth);
+
+    // TEMP: Reset attributes to default values.  Eventually this will be driven by a spread sheet.
+    AbilitySystemComponent->SetNumericAttributeBase(URCHealthSet::GetHealthAttribute(), HealthSet->GetMaxHealth());
+
+    ClearGameplayTags();
+
+    OnHealthChanged.Broadcast(this, HealthSet->GetHealth(), HealthSet->GetHealth(), nullptr);
+    OnMaxHealthChanged.Broadcast(this, HealthSet->GetHealth(), HealthSet->GetHealth(), nullptr);
 }
 
 void URCHealthComponent::UninitializeFromAbilitySystem()
 {
-    if (!AbilitySystemComponent)
+    ClearGameplayTags();
+
+    if (HealthSet)
     {
-        return;
+        HealthSet->OnHealthChanged.RemoveAll(this);
+        HealthSet->OnMaxHealthChanged.RemoveAll(this);
+        HealthSet->OnOutOfHealth.RemoveAll(this);
     }
 
-    auto& HealthDel = AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(URCHealthSet::GetHealthAttribute());
-    auto& MaxDel    = AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(URCHealthSet::GetMaxHealthAttribute());
-
-    HealthDel.RemoveAll(this);
-    MaxDel   .RemoveAll(this);
-
+    HealthSet = nullptr;
     AbilitySystemComponent = nullptr;
-    HealthSet              = nullptr;
 }
 
 void URCHealthComponent::ClearGameplayTags()
@@ -84,7 +109,6 @@ void URCHealthComponent::ClearGameplayTags()
         AbilitySystemComponent->SetLooseGameplayTagCount(RCGameplayTags::Status_Death_Dead, 0);
     }
 }
-
 
 float URCHealthComponent::GetHealth() const
 {
@@ -98,89 +122,189 @@ float URCHealthComponent::GetMaxHealth() const
 
 float URCHealthComponent::GetHealthNormalized() const
 {
-    if (!HealthSet) return 0.f;
-    const float MaxH = HealthSet->GetMaxHealth();
-    return MaxH > 0.f ? (HealthSet->GetHealth() / MaxH) : 0.f;
+    if (HealthSet)
+    {
+        const float Health = HealthSet->GetHealth();
+        const float MaxHealth = HealthSet->GetMaxHealth();
+
+        return ((MaxHealth > 0.0f) ? (Health / MaxHealth) : 0.0f);
+    }
+
+    return 0.0f;
+}
+
+void URCHealthComponent::HandleHealthChanged(AActor* DamageInstigator, AActor* DamageCauser, const FGameplayEffectSpec* DamageEffectSpec, float DamageMagnitude, float OldValue, float NewValue)
+{
+	OnHealthChanged.Broadcast(this, OldValue, NewValue, DamageInstigator);
+}
+
+void URCHealthComponent::HandleMaxHealthChanged(AActor* DamageInstigator, AActor* DamageCauser, const FGameplayEffectSpec* DamageEffectSpec, float DamageMagnitude, float OldValue, float NewValue)
+{
+	OnMaxHealthChanged.Broadcast(this, OldValue, NewValue, DamageInstigator);
+}
+
+void URCHealthComponent::HandleOutOfHealth(AActor* DamageInstigator, AActor* DamageCauser, const FGameplayEffectSpec* DamageEffectSpec, float DamageMagnitude, float OldValue, float NewValue)
+{
+#if WITH_SERVER_CODE
+	if (AbilitySystemComponent && DamageEffectSpec)
+	{
+		// Send the "GameplayEvent.Death" gameplay event through the owner's ability system.  This can be used to trigger a death gameplay ability.
+		{
+			FGameplayEventData Payload;
+			Payload.EventTag = RCGameplayTags::GameplayEvent_Death;
+			Payload.Instigator = DamageInstigator;
+			Payload.Target = AbilitySystemComponent->GetAvatarActor();
+			Payload.OptionalObject = DamageEffectSpec->Def;
+			Payload.ContextHandle = DamageEffectSpec->GetEffectContext();
+			Payload.InstigatorTags = *DamageEffectSpec->CapturedSourceTags.GetAggregatedTags();
+			Payload.TargetTags = *DamageEffectSpec->CapturedTargetTags.GetAggregatedTags();
+			Payload.EventMagnitude = DamageMagnitude;
+
+			FScopedPredictionWindow NewScopedWindow(AbilitySystemComponent, true);
+			AbilitySystemComponent->HandleGameplayEvent(Payload.EventTag, &Payload);
+		}
+
+		// Send a standardized verb message that other systems can observe
+		{
+			FRCVerbMessage Message;
+			Message.Verb = TAG_RedCell_Elimination_Message;
+			Message.Instigator = DamageInstigator;
+			Message.InstigatorTags = *DamageEffectSpec->CapturedSourceTags.GetAggregatedTags();
+			Message.Target = URCVerbMessageHelpers::GetPlayerStateFromObject(AbilitySystemComponent->GetAvatarActor());
+			Message.TargetTags = *DamageEffectSpec->CapturedTargetTags.GetAggregatedTags();
+			//@TODO: Fill out context tags, and any non-ability-system source/instigator tags
+			//@TODO: Determine if it's an opposing team kill, self-own, team kill, etc...
+
+			UGameplayMessageSubsystem& MessageSystem = UGameplayMessageSubsystem::Get(GetWorld());
+			MessageSystem.BroadcastMessage(Message.Verb, Message);
+		}
+
+		//@TODO: assist messages (could compute from damage dealt elsewhere)?
+	}
+
+#endif // #if WITH_SERVER_CODE
+}
+
+void URCHealthComponent::OnRep_DeathState(ERCDeathState OldDeathState)
+{
+	const ERCDeathState NewDeathState = DeathState;
+
+	// Revert the death state for now since we rely on StartDeath and FinishDeath to change it.
+	DeathState = OldDeathState;
+
+	if (OldDeathState > NewDeathState)
+	{
+		// The server is trying to set us back but we've already predicted past the server state.
+		UE_LOG(LogRC, Warning, TEXT("RCHealthComponent: Predicted past server death state [%d] -> [%d] for owner [%s]."), (uint8)OldDeathState, (uint8)NewDeathState, *GetNameSafe(GetOwner()));
+		return;
+	}
+
+	if (OldDeathState == ERCDeathState::NotDead)
+	{
+		if (NewDeathState == ERCDeathState::DeathStarted)
+		{
+			StartDeath();
+		}
+		else if (NewDeathState == ERCDeathState::DeathFinished)
+		{
+			StartDeath();
+			FinishDeath();
+		}
+		else
+		{
+			UE_LOG(LogRC, Error, TEXT("RCHealthComponent: Invalid death transition [%d] -> [%d] for owner [%s]."), (uint8)OldDeathState, (uint8)NewDeathState, *GetNameSafe(GetOwner()));
+		}
+	}
+	else if (OldDeathState == ERCDeathState::DeathStarted)
+	{
+		if (NewDeathState == ERCDeathState::DeathFinished)
+		{
+			FinishDeath();
+		}
+		else
+		{
+			UE_LOG(LogRC, Error, TEXT("RCHealthComponent: Invalid death transition [%d] -> [%d] for owner [%s]."), (uint8)OldDeathState, (uint8)NewDeathState, *GetNameSafe(GetOwner()));
+		}
+	}
+
+	ensureMsgf((DeathState == NewDeathState), TEXT("RCHealthComponent: Death transition failed [%d] -> [%d] for owner [%s]."), (uint8)OldDeathState, (uint8)NewDeathState, *GetNameSafe(GetOwner()));
 }
 
 void URCHealthComponent::StartDeath()
 {
-    if (DeathState != ERCDeathState::NotDead) return;
-    DeathState = ERCDeathState::DeathStarted;
-    OnDeathStarted.Broadcast(GetOwner());
+	if (DeathState != ERCDeathState::NotDead)
+	{
+		return;
+	}
+
+	DeathState = ERCDeathState::DeathStarted;
+
+	if (AbilitySystemComponent)
+	{
+		AbilitySystemComponent->SetLooseGameplayTagCount(RCGameplayTags::Status_Death_Dying, 1);
+	}
+
+	AActor* Owner = GetOwner();
+	check(Owner);
+
+	OnDeathStarted.Broadcast(Owner);
+
+	Owner->ForceNetUpdate();
 }
 
 void URCHealthComponent::FinishDeath()
 {
-    if (DeathState != ERCDeathState::DeathStarted) return;
-    DeathState = ERCDeathState::DeathFinished;
-    OnDeathFinished.Broadcast(GetOwner());
+	if (DeathState != ERCDeathState::DeathStarted)
+	{
+		return;
+	}
+
+	DeathState = ERCDeathState::DeathFinished;
+
+	if (AbilitySystemComponent)
+	{
+		AbilitySystemComponent->SetLooseGameplayTagCount(RCGameplayTags::Status_Death_Dead, 1);
+	}
+
+	AActor* Owner = GetOwner();
+	check(Owner);
+
+	OnDeathFinished.Broadcast(Owner);
+
+	Owner->ForceNetUpdate();
 }
 
-void URCHealthComponent::DamageSelfDestruct(bool /*bFellOutOfWorld*/)
+void URCHealthComponent::DamageSelfDestruct(bool bFellOutOfWorld)
 {
-    if (AbilitySystemComponent && HealthSet)
-    {
-        AbilitySystemComponent->ApplyModToAttribute(
-            URCHealthSet::GetHealthAttribute(),
-            EGameplayModOp::Override,
-            0.f
-        );
-    }
+	if ((DeathState == ERCDeathState::NotDead) && AbilitySystemComponent)
+	{
+		const TSubclassOf<UGameplayEffect> DamageGE = URCAssetManager::GetSubclass(URCGameData::Get().DamageGameplayEffect_SetByCaller);
+		if (!DamageGE)
+		{
+			UE_LOG(LogRC, Error, TEXT("RCHealthComponent: DamageSelfDestruct failed for owner [%s]. Unable to find gameplay effect [%s]."), *GetNameSafe(GetOwner()), *URCGameData::Get().DamageGameplayEffect_SetByCaller.GetAssetName());
+			return;
+		}
+
+		FGameplayEffectSpecHandle SpecHandle = AbilitySystemComponent->MakeOutgoingSpec(DamageGE, 1.0f, AbilitySystemComponent->MakeEffectContext());
+		FGameplayEffectSpec* Spec = SpecHandle.Data.Get();
+
+		if (!Spec)
+		{
+			UE_LOG(LogRC, Error, TEXT("RCHealthComponent: DamageSelfDestruct failed for owner [%s]. Unable to make outgoing spec for [%s]."), *GetNameSafe(GetOwner()), *GetNameSafe(DamageGE));
+			return;
+		}
+
+		Spec->AddDynamicAssetTag(TAG_Gameplay_DamageSelfDestruct);
+
+		if (bFellOutOfWorld)
+		{
+			Spec->AddDynamicAssetTag(TAG_Gameplay_FellOutOfWorld);
+		}
+
+		const float DamageAmount = GetMaxHealth();
+
+		Spec->SetSetByCallerMagnitude(RCGameplayTags::SetByCaller_Damage, DamageAmount);
+		AbilitySystemComponent->ApplyGameplayEffectSpecToSelf(*Spec);
+	}
 }
 
-void URCHealthComponent::HandleHealthChanged(const FOnAttributeChangeData& Data)
-{
-    // Your existing broadcast
-    AActor* InstigatorActor = nullptr;
-    if (Data.GEModData)
-    {
-        InstigatorActor = Data.GEModData->EffectSpec.GetEffectContext().GetOriginalInstigator();
-    }
-    OnHealthChanged.Broadcast(this, Data.OldValue, Data.NewValue, InstigatorActor);
-
-    // **New**: if we hit zero, start death **and** fire the ability event
-    if (Data.NewValue <= 0.f && DeathState == ERCDeathState::NotDead)
-    {
-        // 1) flip your state & broadcast Blueprint event
-        StartDeath();
-
-        // 2) dispatch the GameplayEvent.Death tag so your Death ability fires
-        if (AbilitySystemComponent)
-        {
-            FGameplayEventData EventData;
-            AbilitySystemComponent->HandleGameplayEvent(
-                RCGameplayTags::GameplayEvent_Death,
-                /*Payload=*/&EventData
-            );
-        }
-    }
-}
-
-void URCHealthComponent::HandleMaxHealthChanged(const FOnAttributeChangeData& Data)
-{
-    AActor* InstigatorActor = nullptr;
-    if (Data.GEModData)
-    {
-        InstigatorActor = Data.GEModData->EffectSpec.GetEffectContext().GetOriginalInstigator();
-    }
-
-    OnMaxHealthChanged.Broadcast(this, Data.OldValue, Data.NewValue, InstigatorActor);
-}
-
-void URCHealthComponent::HandleOutOfHealth(const FOnAttributeChangeData& /*Data*/)
-{
-    // No-op: zero‑health is handled in HandleHealthChanged
-}
-
-void URCHealthComponent::OnRep_DeathState(ERCDeathState OldState)
-{
-    if (DeathState == ERCDeathState::DeathStarted)
-    {
-        OnDeathStarted.Broadcast(GetOwner());
-    }
-    else if (DeathState == ERCDeathState::DeathFinished)
-    {
-        OnDeathFinished.Broadcast(GetOwner());
-    }
-}

@@ -9,10 +9,14 @@
 #include "AbilitySystem/RCAbilitySystemComponent.h"
 #include "Character/RCPawnData.h"
 #include "Character/RCPawnExtensionComponent.h"
+#include "Engine/World.h"
 #include "Components/GameFrameworkComponentManager.h"
+#include "GameFramework/GameplayMessageSubsystem.h"
+#include "GameModes/Experience/RCExperienceManagerComponent.h"
 #include "GameplayEffectTypes.h"
 #include "RCPlayerController.h"
 #include "GameModes/RCGameMode.h"
+#include "RCLogChannels.h"
 #include "Net/UnrealNetwork.h"
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(RCPlayerState)
@@ -82,6 +86,22 @@ void ARCPlayerState::OnReactivated()
     Super::OnReactivated();
 }
 
+void ARCPlayerState::OnExperienceLoaded(const URCExperienceDefinition* /*CurrentExperience*/)
+{
+    if (ARCGameMode* RCGameMode = GetWorld()->GetAuthGameMode<ARCGameMode>())
+    {
+        if (const URCPawnData* NewPawnData = RCGameMode->GetPawnDataForController(GetOwningController()))
+        {
+            SetPawnData(NewPawnData);
+        }
+        else
+        {
+            UE_LOG(LogRC, Error, TEXT("ARCPlayerState::OnExperienceLoaded(): Unable to find PawnData to initialize player state [%s]!"), *GetNameSafe(this));
+        }
+    }
+}
+
+
 void ARCPlayerState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
     Super::GetLifetimeReplicatedProps(OutLifetimeProps);
@@ -106,24 +126,21 @@ UAbilitySystemComponent* ARCPlayerState::GetAbilitySystemComponent() const
 void ARCPlayerState::PostInitializeComponents()
 {
     Super::PostInitializeComponents();
-    // Only on the server (authority)
-    if (GetLocalRole() == ROLE_Authority)
+
+    check(AbilitySystemComponent);
+    AbilitySystemComponent->InitAbilityActorInfo(this, GetPawn());
+
+    UWorld* World = GetWorld();
+    if (World && World->IsGameWorld() && World->GetNetMode() != NM_Client)
     {
-        if (ARCGameMode* RCGameMode = GetWorld()->GetAuthGameMode<ARCGameMode>())
-        {
-            if (const URCPawnData* NewPawnData = RCGameMode->GetPawnDataForController(GetOwningController()))
-            {
-                SetPawnData(NewPawnData);
-            }
-            else
-            {
-                UE_LOG(LogTemp, Error,
-                    TEXT("ARCPlayerState::PostInitializeComponents(): No PawnData for PlayerState %s"),
-                    *GetNameSafe(this));
-            }
-        }
+        AGameStateBase* GameState = GetWorld()->GetGameState();
+        check(GameState);
+        URCExperienceManagerComponent* ExperienceComponent = GameState->FindComponentByClass<URCExperienceManagerComponent>();
+        check(ExperienceComponent);
+        ExperienceComponent->CallOrRegister_OnExperienceLoaded(FOnRCExperienceLoaded::FDelegate::CreateUObject(this, &ThisClass::OnExperienceLoaded));
     }
 }
+
 
 void ARCPlayerState::SetPawnData(const URCPawnData* InPawnData)
 {
@@ -136,7 +153,7 @@ void ARCPlayerState::SetPawnData(const URCPawnData* InPawnData)
 
     if (PawnData)
     {
-        UE_LOG(LogTemp, Error, TEXT("Trying to set PawnData [%s] on player state [%s] that already has valid PawnData [%s]."), *GetNameSafe(InPawnData), *GetNameSafe(this), *GetNameSafe(PawnData));
+        UE_LOG(LogRC, Error, TEXT("Trying to set PawnData [%s] on player state [%s] that already has valid PawnData [%s]."), *GetNameSafe(InPawnData), *GetNameSafe(this), *GetNameSafe(PawnData));
         return;
     }
 

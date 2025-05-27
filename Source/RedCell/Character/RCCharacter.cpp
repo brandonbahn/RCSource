@@ -28,13 +28,11 @@ ARCCharacter::ARCCharacter(const FObjectInitializer& ObjInit)
   PawnExtensionComponent->OnAbilitySystemInitialized_RegisterAndCall(FSimpleMulticastDelegate::FDelegate::CreateUObject(this, &ThisClass::OnAbilitySystemInitialized));
   PawnExtensionComponent->OnAbilitySystemUninitialized_Register(FSimpleMulticastDelegate::FDelegate::CreateUObject(this, &ThisClass::OnAbilitySystemUninitialized));
     
-  HealthComponent = ObjInit.CreateDefaultSubobject<URCHealthComponent>(this, TEXT("RCHealthComponent"));
+  HealthComponent = ObjInit.CreateDefaultSubobject<URCHealthComponent>(this, TEXT("HealthComponent"));
   HealthComponent->OnDeathStarted.AddDynamic(this, &ThisClass::OnDeathStarted);
   HealthComponent->OnDeathFinished.AddDynamic(this, &ThisClass::OnDeathFinished);
     
-  HeroComponent = ObjInit.CreateDefaultSubobject<URCHeroComponent>(this, TEXT("RCHeroComponent"));
-    
-  CoreComponent = ObjInit.CreateDefaultSubobject<URCCoreComponent>(this, TEXT("RCCoreComponent"));
+  CoreComponent = ObjInit.CreateDefaultSubobject<URCCoreComponent>(this, TEXT("CoreComponent"));
 }
 
 void ARCCharacter::BeginPlay()

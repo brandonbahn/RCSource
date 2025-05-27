@@ -69,7 +69,7 @@ public:
 
 	UPROPERTY(BlueprintReadOnly, Category="RedCell|WeaponPickup")
 	TObjectPtr<UStaticMeshComponent> WeaponMesh;
-
+	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="RedCell|WeaponPickup")
 	float WeaponMeshRotationSpeed;
 

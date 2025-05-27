@@ -166,9 +166,6 @@ private:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "RedCell|Pawn", meta=(AllowPrivateAccess="true"))
     TObjectPtr<URCPawnExtensionComponent> PawnExtensionComponent;
     
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "RedCell|Hero", meta=(AllowPrivateAccess="true"))
-    TObjectPtr<URCHeroComponent> HeroComponent;
-    
     /** The pure C++ health component that binds to the ASC */
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="RedCell|Health", meta=(DisplayName="Health Component", AllowPrivateAccess="true"))
     URCHealthComponent* HealthComponent;

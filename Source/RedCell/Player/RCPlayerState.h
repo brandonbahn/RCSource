@@ -17,6 +17,7 @@ class APlayerState;
 class FName;
 class UAbilitySystemComponent;
 class URCAbilitySystemComponent;
+class URCExperienceDefinition;
 class URCPawnData;
 class UObject;
 struct FFrame;
@@ -27,7 +28,7 @@ struct FGameplayTag;
  *
  *    Base player state class used by this project.
  */
-UCLASS()
+UCLASS(Config = Game)
 class REDCELL_API ARCPlayerState
   : public APlayerState
   , public IAbilitySystemInterface
@@ -82,11 +83,15 @@ public:
     
   // If using Stamina/Mana, add them here as well:
   // UPROPERTY() URCAttributeSet_Stamina* StaminaSet;
-  // UPROPERTY() URCAttributeSet_Mana*     ManaSet;
+  // UPROPERTY() URCAttributeSet_Mana* ManaSet;
 
     // Default AbilitySet to grant on possession (server only)
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="AbilitySystem")
     URCAbilitySet* DefaultAbilitySet;
+
+private:
+	void OnExperienceLoaded(const URCExperienceDefinition* CurrentExperience);
+	
     
 protected:
     UFUNCTION()
