@@ -71,7 +71,7 @@ void URCHealthComponent::InitializeWithAbilitySystem(URCAbilitySystemComponent* 
         UE_LOG(LogRC, Error, TEXT("RCHealthComponent: Cannot initialize health component for owner [%s] with NULL health set on the ability system."), *GetNameSafe(Owner));
         return;
     }
-
+	
     // Register to listen for attribute changes.
     HealthSet->OnHealthChanged.AddUObject(this, &ThisClass::HandleHealthChanged);
     HealthSet->OnMaxHealthChanged.AddUObject(this, &ThisClass::HandleMaxHealthChanged);

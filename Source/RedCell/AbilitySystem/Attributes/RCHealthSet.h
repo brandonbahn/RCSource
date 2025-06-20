@@ -3,9 +3,9 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "AbilitySystemComponent.h"        // for FGameplayEffectModCallbackData, etc.
-#include "RCAttributeSet.h"               // your base AttributeSet
-#include "NativeGameplayTags.h"           // for the UE_DECLARE_GAMEPLAY_TAG macros
+#include "AbilitySystemComponent.h"        
+#include "RCAttributeSet.h"               
+#include "NativeGameplayTags.h"           
 
 #include "RCHealthSet.generated.h"
 

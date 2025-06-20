@@ -1,19 +1,34 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 
-#include "Character/RCCoreComponent.h"
+#include "RCCoreComponent.h"
+#include "AbilitySystem/Attributes/RCAttributeSet.h"
+#include "RCLogChannels.h"
+#include "System/RCAssetManager.h"
+#include "System/RCGameData.h"
+#include "RCGameplayTags.h"
+#include "GameplayEffectExtension.h"               
+#include "Net/UnrealNetwork.h"
 #include "AbilitySystem/RCAbilitySystemComponent.h"
 #include "AbilitySystem/Attributes/RCCoreSet.h"
-#include "RCGameplayTags.h"
-#include "GameplayEffectExtension.h"
-#include "Net/UnrealNetwork.h"
+#include "Messages/RCVerbMessage.h"
+#include "Messages/RCVerbMessageHelpers.h"
+#include "GameFramework/GameplayMessageSubsystem.h"
+#include "GameFramework/PlayerState.h"
+#include "Engine/World.h"
 
-URCCoreComponent::URCCoreComponent(const FObjectInitializer& ObjInit)
-    : Super(ObjInit)
-    , AbilitySystemComponent(nullptr)
-    , CoreSet(nullptr)
+#include UE_INLINE_GENERATED_CPP_BY_NAME(RCCoreComponent)
+
+URCCoreComponent::URCCoreComponent(const FObjectInitializer& ObjectInitializer)
+    : Super(ObjectInitializer)
 {
+    PrimaryComponentTick.bStartWithTickEnabled = false;
+    PrimaryComponentTick.bCanEverTick = false;
+
     SetIsReplicatedByDefault(true);
+
+    AbilitySystemComponent = nullptr;
+    CoreSet = nullptr;
 }
 
 void URCCoreComponent::OnUnregister()
@@ -22,44 +37,67 @@ void URCCoreComponent::OnUnregister()
     Super::OnUnregister();
 }
 
+void URCCoreComponent::ClearGameplayTags()
+{
+    // Add any mana-related gameplay tags that need to be cleared here
+    if (AbilitySystemComponent)
+    {
+        AbilitySystemComponent->SetLooseGameplayTagCount(TAG_Mana_Empty, 0);
+    }
+}
+
 void URCCoreComponent::InitializeWithAbilitySystem(URCAbilitySystemComponent* InASC)
 {
-    if (!InASC || AbilitySystemComponent)
+    AActor* Owner = GetOwner();
+    check(Owner);
+
+    if (AbilitySystemComponent)
     {
+        UE_LOG(LogRC, Error, TEXT("RCCoreComponent: Core component for owner [%s] has already been initialized with an ability system."), *GetNameSafe(Owner));
         return;
     }
 
     AbilitySystemComponent = InASC;
-    CoreSet = InASC->GetSet<URCCoreSet>();
-    if (!CoreSet)
+    if (!AbilitySystemComponent)
     {
-        AbilitySystemComponent = nullptr;
+        UE_LOG(LogRC, Error, TEXT("RCCoreComponent: Cannot initialize Core component for owner [%s] with NULL ability system."), *GetNameSafe(Owner));
         return;
     }
 
-    // Bind the single‑param delegates
-    InASC->GetGameplayAttributeValueChangeDelegate(URCCoreSet::GetManaAttribute())
-        .AddUObject(this, &URCCoreComponent::HandleManaChanged);
+    CoreSet = AbilitySystemComponent->GetSet<URCCoreSet>();
+    if (!CoreSet)
+    {
+        UE_LOG(LogRC, Error, TEXT("RCCoreComponent: Cannot initialize Core component for owner [%s] with NULL Core set on the ability system."), *GetNameSafe(Owner));
+        return;
+    }
+	
+    // Register to listen for attribute changes.
+    CoreSet->OnManaChanged.AddUObject(this, &ThisClass::HandleManaChanged);
+    CoreSet->OnMaxManaChanged.AddUObject(this, &ThisClass::HandleMaxManaChanged);
+    CoreSet->OnOutOfMana.AddUObject(this, &ThisClass::HandleOutOfMana);
 
-    InASC->GetGameplayAttributeValueChangeDelegate(URCCoreSet::GetMaxManaAttribute())
-        .AddUObject(this, &URCCoreComponent::HandleMaxManaChanged);
+    // TEMP: Reset attributes to default values.  Eventually this will be driven by a spread sheet.
+    AbilitySystemComponent->SetNumericAttributeBase(URCCoreSet::GetManaAttribute(), CoreSet->GetMaxMana());
+
+    ClearGameplayTags();
+
+    OnManaChanged.Broadcast(this, CoreSet->GetMana(), CoreSet->GetMana(), nullptr);
+    OnMaxManaChanged.Broadcast(this, CoreSet->GetMana(), CoreSet->GetMana(), nullptr);
 }
 
 void URCCoreComponent::UninitializeFromAbilitySystem()
 {
-    if (!AbilitySystemComponent)
+    ClearGameplayTags();
+
+    if (CoreSet)
     {
-        return;
+        CoreSet->OnManaChanged.RemoveAll(this);
+        CoreSet->OnMaxManaChanged.RemoveAll(this);
+        CoreSet->OnOutOfMana.RemoveAll(this);
     }
 
-    auto& ManaDel = AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(URCCoreSet::GetManaAttribute());
-    auto& MaxDel    = AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(URCCoreSet::GetMaxManaAttribute());
-
-    ManaDel.RemoveAll(this);
-    MaxDel .RemoveAll(this);
-
+    CoreSet = nullptr;
     AbilitySystemComponent = nullptr;
-    CoreSet                = nullptr;
 }
 
 float URCCoreComponent::GetMana() const
@@ -79,47 +117,50 @@ float URCCoreComponent::GetManaNormalized() const
     return MaxM > 0.f ? (CoreSet->GetMana() / MaxM) : 0.f;
 }
 
-void URCCoreComponent::HandleManaChanged(const FOnAttributeChangeData& Data)
+void URCCoreComponent::HandleManaChanged(AActor* DamageInstigator, AActor* DamageCauser, const FGameplayEffectSpec* DamageEffectSpec, float DamageMagnitude, float OldValue, float NewValue)
 {
-    // Your existing broadcast
-    AActor* InstigatorActor = nullptr;
-    if (Data.GEModData)
+    OnManaChanged.Broadcast(this, OldValue, NewValue, DamageInstigator);
+
+    // If we just got mana back after being empty, remove the tags
+    if (OldValue <= 0.0f && NewValue > 0.0f && AbilitySystemComponent)
     {
-        InstigatorActor = Data.GEModData->EffectSpec.GetEffectContext().GetOriginalInstigator();
-    }
-    OnManaChanged.Broadcast(this, Data.OldValue, Data.NewValue, InstigatorActor);
-    
-    if (Data.NewValue <= 0.f && Data.OldValue > 0.f)
-    {
-        if (AbilitySystemComponent)
-        {
-            FGameplayEventData EventData;
-            AbilitySystemComponent->HandleGameplayEvent(RCGameplayTags::GameplayEvent_Mana_Empty, &EventData);
-        }
-    }
-    else if (Data.NewValue > 0.f && Data.OldValue <= 0.f)
-    {
-        if (AbilitySystemComponent)
-        {
-            FGameplayEventData EventData;
-            AbilitySystemComponent->HandleGameplayEvent(RCGameplayTags::GameplayEvent_Mana_Restored, &EventData);
-        }
+        AbilitySystemComponent->SetLooseGameplayTagCount(TAG_Mana_Empty, 0);
     }
 }
             
-void URCCoreComponent::HandleMaxManaChanged(const FOnAttributeChangeData& Data)
+void URCCoreComponent::HandleMaxManaChanged(AActor* DamageInstigator, AActor* DamageCauser, const FGameplayEffectSpec* DamageEffectSpec, float DamageMagnitude, float OldValue, float NewValue)
 {
-    AActor* InstigatorActor = nullptr;
-    if (Data.GEModData)
+    OnMaxManaChanged.Broadcast(this, OldValue, NewValue, DamageInstigator);
+}
+
+void URCCoreComponent::HandleOutOfMana(AActor* DamageInstigator, AActor* DamageCauser, const FGameplayEffectSpec* DamageEffectSpec, float DamageMagnitude, float OldValue, float NewValue)
+{
+#if WITH_SERVER_CODE
+    if (AbilitySystemComponent && DamageEffectSpec)
     {
-        InstigatorActor = Data.GEModData->EffectSpec.GetEffectContext().GetOriginalInstigator();
+        // Send the "GameplayEvent.Mana.Empty" gameplay event through the owner's ability system
+        // This can be used to trigger abilities that respond to being out of mana
+        {
+            FGameplayEventData Payload;
+            Payload.EventTag = RCGameplayTags::GameplayEvent_Mana_Empty;
+            Payload.Instigator = DamageInstigator;
+            Payload.Target = AbilitySystemComponent->GetAvatarActor();
+            Payload.OptionalObject = DamageEffectSpec->Def;
+            Payload.ContextHandle = DamageEffectSpec->GetEffectContext();
+            Payload.InstigatorTags = *DamageEffectSpec->CapturedSourceTags.GetAggregatedTags();
+            Payload.TargetTags = *DamageEffectSpec->CapturedTargetTags.GetAggregatedTags();
+            Payload.EventMagnitude = DamageMagnitude;
+
+            FScopedPredictionWindow NewScopedWindow(AbilitySystemComponent, true);
+            AbilitySystemComponent->HandleGameplayEvent(Payload.EventTag, &Payload);
+        }
+
+        // Optionally: Apply a gameplay tag to mark the character as out of mana
+        // This could be used to prevent casting abilities, change UI state, etc.
+        if (AbilitySystemComponent)
+        {
+            AbilitySystemComponent->SetLooseGameplayTagCount(TAG_Mana_Empty, 1);
+        }
     }
-
-    OnMaxManaChanged.Broadcast(this, Data.OldValue, Data.NewValue, InstigatorActor);
+#endif // #if WITH_SERVER_CODE
 }
-
-void URCCoreComponent::HandleOutOfMana(const FOnAttributeChangeData& /*Data*/)
-{
-    // No-op: zero‑health is handled in HandleHealthChanged
-}
-

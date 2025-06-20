@@ -5,6 +5,8 @@
 #include "GameFramework/Actor.h"
 
 DEFINE_LOG_CATEGORY(LogRC);
+DEFINE_LOG_CATEGORY(LogRCCharacter);
+DEFINE_LOG_CATEGORY(LogRCPlayer);
 DEFINE_LOG_CATEGORY(LogRCExperience);
 DEFINE_LOG_CATEGORY(LogRCAbilitySystem);
 DEFINE_LOG_CATEGORY(LogRCTeams);

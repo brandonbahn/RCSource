@@ -53,9 +53,7 @@ public:
     UFUNCTION(BlueprintPure, Category="RedCell|Health")
     static URCHealthComponent* FindHealthComponent(const AActor* Actor)
     {
-        return Actor
-            ? Actor->FindComponentByClass<URCHealthComponent>()
-            : nullptr;
+        return Actor ? Actor->FindComponentByClass<URCHealthComponent>() : nullptr;
     }
 
     /** Hook up to an ASC (usually from PlayerState) */

@@ -3,8 +3,8 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "GameFramework/GameStateBase.h"
 #include "AbilitySystemInterface.h"
+#include "ModularGameState.h"
 #include "Player/RCPlayerSpawningManagerComponent.h"
 #include "RCGameState.generated.h"
 
@@ -18,7 +18,7 @@ class UObject;
 struct FFrame;
 
 UCLASS(Config = Game)
-class REDCELL_API ARCGameState : public AGameStateBase, public IAbilitySystemInterface
+class REDCELL_API ARCGameState : public AModularGameStateBase, public IAbilitySystemInterface
 {
   GENERATED_BODY()
 

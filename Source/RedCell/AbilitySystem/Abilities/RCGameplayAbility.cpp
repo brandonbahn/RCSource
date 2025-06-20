@@ -47,6 +47,8 @@ URCGameplayAbility::URCGameplayAbility(const FObjectInitializer& ObjInit)
 
     ActivationPolicy   = ERCAbilityActivationPolicy::OnInputTriggered;
     ActivationGroup    = ERCAbilityActivationGroup::Independent;
+
+    bLogCancelation = false;
 }
 
 URCAbilitySystemComponent* URCGameplayAbility::GetRCAbilitySystemComponentFromActorInfo() const

@@ -5,11 +5,15 @@
 #include "AbilitySystem/RCAbilitySystemComponent.h"
 #include "Components/GameFrameworkComponentDelegates.h"
 #include "Components/GameFrameworkComponentManager.h"
+#include "Camera/RCPlayerCameraManager.h"
 #include "GameFramework/Controller.h"
 #include "GameFramework/Pawn.h"
 #include "RCGameplayTags.h"
+#include "RCLogChannels.h"
 #include "RCPawnData.h"
+#include "GameFramework/GameplayCameraComponent.h"
 #include "Net/UnrealNetwork.h"
+#include "Player/RCPlayerController.h"
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(RCPawnExtensionComponent)
 
@@ -74,7 +78,7 @@ void URCPawnExtensionComponent::EndPlay(const EEndPlayReason::Type EndPlayReason
 
 void URCPawnExtensionComponent::SetPawnData(const URCPawnData* InPawnData)
 {
-    UE_LOG(LogTemp, Warning, TEXT("SetPawnData called: InPawnData = %s"), *GetNameSafe(InPawnData));
+    UE_LOG(LogRC, Warning, TEXT("PawnExtComp SetPawnData called: InPawnData = %s"), *GetNameSafe(InPawnData));
     
     check(InPawnData);
 
@@ -87,11 +91,12 @@ void URCPawnExtensionComponent::SetPawnData(const URCPawnData* InPawnData)
 
     if (PawnData)
     {
+        UE_LOG(LogRCCharacter, Error, TEXT("Trying to set PawnData [%s] on pawn [%s] that already has valid PawnData [%s]."), *GetNameSafe(InPawnData), *GetNameSafe(Pawn), *GetNameSafe(PawnData));
         return;
     }
 
     PawnData = InPawnData;
-
+    
     Pawn->ForceNetUpdate();
 
     CheckDefaultInitialization();
@@ -122,8 +127,12 @@ void URCPawnExtensionComponent::InitializeAbilitySystem(URCAbilitySystemComponen
     APawn* Pawn = GetPawnChecked<APawn>();
     AActor* ExistingAvatar = InASC->GetAvatarActor();
 
+    UE_LOG(LogRCCharacter, Verbose, TEXT("Setting up ASC [%s] on pawn [%s] owner [%s], existing [%s] "), *GetNameSafe(InASC), *GetNameSafe(Pawn), *GetNameSafe(InOwnerActor), *GetNameSafe(ExistingAvatar));
+
     if ((ExistingAvatar != nullptr) && (ExistingAvatar != Pawn))
     {
+        UE_LOG(LogRCCharacter, Log, TEXT("Existing avatar (authority=%d)"), ExistingAvatar->HasAuthority() ? 1 : 0);
+        
         // There is already a pawn acting as the ASC's avatar, so we need to kick it out
         // This can happen on clients if they're lagged: their new pawn is spawned + possessed before the dead one is removed
         ensure(!ExistingAvatar->HasAuthority());
@@ -159,7 +168,7 @@ void URCPawnExtensionComponent::UninitializeAbilitySystem()
         AbilityTypesToIgnore.AddTag(RCGameplayTags::Ability_Behavior_SurvivesDeath);
 
         AbilitySystemComponent->CancelAbilities(nullptr, &AbilityTypesToIgnore);
-      //AbilitySystemComponent->ClearAbilityInput();// NEED TO ADD //
+        AbilitySystemComponent->ClearAbilityInput(); // NEED TO ADD //
         AbilitySystemComponent->RemoveAllGameplayCues();
 
         if (AbilitySystemComponent->GetOwnerActor() != nullptr)
@@ -203,7 +212,12 @@ void URCPawnExtensionComponent::HandlePlayerStateReplicated()
 
 void URCPawnExtensionComponent::SetupPlayerInputComponent()
 {
+    UE_LOG(LogRC, Error, TEXT("=== SetupPlayerInputComponent called on %s for pawn %s ==="), 
+       GetNetMode() == NM_DedicatedServer ? TEXT("SERVER") : TEXT("CLIENT"),
+       *GetNameSafe(GetOwner()));
+    
     CheckDefaultInitialization();
+    UE_LOG(LogRCCharacter, Log, TEXT("PawnExtComp: SetupPlayerInputComponent Start"));
 }
 
 
@@ -213,7 +227,7 @@ void URCPawnExtensionComponent::CheckDefaultInitialization()
     CheckDefaultInitializationForImplementers();
 
     static const TArray<FGameplayTag> StateChain = { RCGameplayTags::InitState_Spawned, RCGameplayTags::InitState_DataAvailable, RCGameplayTags::InitState_DataInitialized, RCGameplayTags::InitState_GameplayReady };
-
+    
     // This will try to progress from spawned (which is only set in BeginPlay) through the data initialization stages until it gets to gameplay ready
     ContinueInitStateChain(StateChain);
 }
@@ -250,7 +264,7 @@ bool URCPawnExtensionComponent::CanChangeInitState(UGameFrameworkComponentManage
                 return false;
             }
         }
-
+        
         return true;
     }
     else if (CurrentState == RCGameplayTags::InitState_DataAvailable && DesiredState == RCGameplayTags::InitState_DataInitialized)
@@ -262,7 +276,7 @@ bool URCPawnExtensionComponent::CanChangeInitState(UGameFrameworkComponentManage
     {
         return true;
     }
-
+    
     return false;
 }
 
@@ -270,9 +284,22 @@ void URCPawnExtensionComponent::HandleChangeInitState(UGameFrameworkComponentMan
 {
     if (DesiredState == RCGameplayTags::InitState_DataInitialized)
     {
-        // This is currently all handled by other components listening to this state change
+        if (APawn* Pawn = GetPawn<APawn>())
+        {
+            // Initialize camera system when we reach DataInitialized
+            if (ARCPlayerController* RCPC = Cast<ARCPlayerController>(Pawn->GetController()))
+            {
+                // Since you set PlayerCameraManagerClass in constructor, this is guaranteed to be ARCPlayerCameraManager
+                ARCPlayerCameraManager* CameraManager = Cast<ARCPlayerCameraManager>(RCPC->PlayerCameraManager);
+                check(CameraManager); // Should never be null
+                
+                CameraManager->InitializeGameplayCamera(Pawn, PawnData);
+                UE_LOG(LogRCCharacter, Log, TEXT("PawnExtComp: InitializeGameplayCamera"));
+            }
+        }
     }
 }
+
 
 void URCPawnExtensionComponent::OnActorInitStateChanged(const FActorInitStateChangedParams& Params)
 {

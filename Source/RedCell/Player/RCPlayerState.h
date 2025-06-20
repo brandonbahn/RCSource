@@ -3,13 +3,15 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "GameFramework/PlayerState.h"
 #include "AbilitySystemInterface.h"
+#include "ModularPlayerState.h"
 #include "AbilitySystem/RCAbilitySystemComponent.h"
 #include "AbilitySystem/Attributes/RCHealthSet.h"
 #include "AbilitySystem/Attributes/RCCoreSet.h"
 #include "AbilitySystem/RCAbilitySet.h"
 #include "RCPlayerState.generated.h"
+
+struct FRCVerbMessage;
 
 class AController;
 class ARCPlayerController;
@@ -29,9 +31,7 @@ struct FGameplayTag;
  *    Base player state class used by this project.
  */
 UCLASS(Config = Game)
-class REDCELL_API ARCPlayerState
-  : public APlayerState
-  , public IAbilitySystemInterface
+class REDCELL_API ARCPlayerState : public AModularPlayerState, public IAbilitySystemInterface
 {
   GENERATED_BODY()
 
@@ -67,23 +67,10 @@ public:
     
     static const FName NAME_RCAbilityReady;
 
-    // IAbilitySystemInterface
-  //  virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override
-  //{
-  //  return AbilitySystemComponent;
-  //}
-
-    // The ability system component sub-object used by player characters.
-    //UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AbilitySystemComponent")
-    //URCAbilitySystemComponent* AbilitySystemComponent;
-
-    // Health attribute set used by this actor.
-    //UPROPERTY()
-    //URCHealthSet*           HealthSet;
-    
-  // If using Stamina/Mana, add them here as well:
-  // UPROPERTY() URCAttributeSet_Stamina* StaminaSet;
-  // UPROPERTY() URCAttributeSet_Mana* ManaSet;
+	// Send a message to just this player
+	// (use only for client notifications like accolades, quest toasts, etc... that can handle being occasionally lost)
+	UFUNCTION(Client, Unreliable, BlueprintCallable, Category = "RedCell|PlayerState")
+	void ClientBroadcastMessage(const FRCVerbMessage Message);
 
     // Default AbilitySet to grant on possession (server only)
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="AbilitySystem")

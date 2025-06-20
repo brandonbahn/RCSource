@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Engine/DataAsset.h"
+#include "Character/RCMovementModes.h"
 #include "GameplayTagContainer.h"
 
 #include "RCInputConfig.generated.h"
@@ -51,6 +52,10 @@ public:
     UFUNCTION(BlueprintCallable, Category = "RedCell|Pawn")
     const UInputAction* FindAbilityInputActionForTag(const FGameplayTag& InputTag, bool bLogNotFound = true) const;
 
+    // Helper function to get movement input scale based on mode
+    UFUNCTION(BlueprintCallable, Category = "RedCell|Pawn")
+    FVector2D GetMovementInputScaleValue(const FVector2D& Input) const;
+
 public:
     // List of input actions used by the owner.  These input actions are mapped to a gameplay tag and must be manually bound.
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Meta = (TitleProperty = "InputAction"))
@@ -59,4 +64,10 @@ public:
     // List of input actions used by the owner.  These input actions are mapped to a gameplay tag and are automatically bound to abilities with matching input tags.
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Meta = (TitleProperty = "InputAction"))
     TArray<FRCInputAction> AbilityInputActions;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Analog Stick Behavior", Meta = (DisplayName = "Movement Mode"))
+    EMovementStickMode MovementStickMode = EMovementStickMode::FixedSpeedSingleGait;
+    
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Analog Stick Behavior", Meta = (DisplayName = "Walk / Run Threshold")) 
+    float AnalogWalkRunThreshold = 0.7f;
 };

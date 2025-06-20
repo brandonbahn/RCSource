@@ -5,7 +5,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "GameFramework/PlayerController.h"
+#include "CommonPlayerController.h"
 #include "RCPlayerController.generated.h"
 
 class ARCHUD;
@@ -26,7 +26,7 @@ struct FFrame;
  */
 
 UCLASS(Blueprintable)
-class REDCELL_API ARCPlayerController : public APlayerController
+class REDCELL_API ARCPlayerController : public ACommonPlayerController
 {
     GENERATED_BODY()
 
@@ -43,6 +43,35 @@ public:
     UFUNCTION(BlueprintCallable, Category = "RedCell|PlayerController")
     ARCHUD* GetRCHUD() const;
 
+    //~AActor interface
+    virtual void PreInitializeComponents() override;
+    virtual void BeginPlay() override;
+    virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+    virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+    //~End of AActor interface
+
+    //~AController interface
+    virtual void OnPossess(APawn* InPawn) override;
+    virtual void OnUnPossess() override;
+    virtual void InitPlayerState() override;
+    virtual void CleanupPlayerState() override;
+    virtual void OnRep_PlayerState() override;
+    //~End of AController interface
+
+    //~APlayerController interface
+    virtual void UpdateForceFeedback(IInputInterface* InputInterface, const int32 ControllerId) override;
+    virtual void PreProcessInput(const float DeltaTime, const bool bGamePaused) override;
+    virtual void PostProcessInput(const float DeltaTime, const bool bGamePaused) override;
+    //~End of APlayerController interface
+    
 protected:
     virtual void AcknowledgePossession(APawn* P) override;
+
+protected:
+    // Called when the player state is set or cleared
+    virtual void OnPlayerStateChanged();
+
+private:
+    void BroadcastOnPlayerStateChanged();
+
 };

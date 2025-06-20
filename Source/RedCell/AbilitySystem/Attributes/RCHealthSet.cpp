@@ -3,10 +3,10 @@
 
 #include "AbilitySystem/Attributes/RCHealthSet.h"
 #include "AbilitySystem/Attributes/RCAttributeSet.h"
-#include "AbilitySystem/RCAbilitySystemComponent.h"  // custom ASC
-#include "NativeGameplayTags.h"                      // for UE_DEFINE_GAMEPLAY_TAG
-#include "RCGameplayTags.h"                          // for RCGameplayTags::GameplayEvent_Death
-#include "GameplayEffectExtension.h"                 // defines FGameplayEffectModCallbackData fully
+#include "AbilitySystem/RCAbilitySystemComponent.h"  
+#include "NativeGameplayTags.h" 
+#include "RCGameplayTags.h"   
+#include "GameplayEffectExtension.h" 
 #include "Messages/RCVerbMessage.h"
 #include "GameFramework/GameplayMessageSubsystem.h"
 #include "Net/UnrealNetwork.h"
@@ -88,6 +88,7 @@ bool URCHealthSet::PreGameplayEffectExecute(FGameplayEffectModCallbackData &Data
 				return false;
 			}
 
+#if 0
 #if !UE_BUILD_SHIPPING
 			// Check GodMode cheat, unlimited health is checked below
 			if (Data.Target.HasMatchingGameplayTag(RCGameplayTags::Cheat_GodMode) && !bIsDamageFromSelfDestruct)
@@ -97,6 +98,7 @@ bool URCHealthSet::PreGameplayEffectExecute(FGameplayEffectModCallbackData &Data
 				return false;
 			}
 #endif // #if !UE_BUILD_SHIPPING
+#endif // 0
 		}
 	}
 
@@ -114,6 +116,7 @@ void URCHealthSet::PostGameplayEffectExecute(const FGameplayEffectModCallbackDat
 	const bool bIsDamageFromSelfDestruct = Data.EffectSpec.GetDynamicAssetTags().HasTagExact(TAG_Gameplay_DamageSelfDestruct);
 	float MinimumHealth = 0.0f;
 
+#if 0
 #if !UE_BUILD_SHIPPING
 	// Godmode and unlimited health stop death unless it's a self destruct
 	if (!bIsDamageFromSelfDestruct &&
@@ -122,6 +125,7 @@ void URCHealthSet::PostGameplayEffectExecute(const FGameplayEffectModCallbackDat
 		MinimumHealth = 1.0f;
 	}
 #endif // #if !UE_BUILD_SHIPPING
+#endif // 0
 
 	const FGameplayEffectContextHandle& EffectContext = Data.EffectSpec.GetEffectContext();
 	AActor* Instigator = EffectContext.GetOriginalInstigator();

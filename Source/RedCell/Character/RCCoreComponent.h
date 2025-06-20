@@ -71,9 +71,11 @@ public:
 protected:
     virtual void OnUnregister() override;
 
-    void HandleManaChanged(const FOnAttributeChangeData& Data);
-    void HandleMaxManaChanged(const FOnAttributeChangeData& Data);
-    void HandleOutOfMana(const FOnAttributeChangeData& Data);
+    void ClearGameplayTags();
+
+    void HandleManaChanged(AActor* DamageInstigator, AActor* DamageCauser, const FGameplayEffectSpec* DamageEffectSpec, float DamageMagnitude, float OldValue, float NewValue);
+    void HandleMaxManaChanged(AActor* DamageInstigator, AActor* DamageCauser, const FGameplayEffectSpec* DamageEffectSpec, float DamageMagnitude, float OldValue, float NewValue);
+    void HandleOutOfMana(AActor* DamageInstigator, AActor* DamageCauser, const FGameplayEffectSpec* DamageEffectSpec, float DamageMagnitude, float OldValue, float NewValue);
     
 private:
     UPROPERTY()

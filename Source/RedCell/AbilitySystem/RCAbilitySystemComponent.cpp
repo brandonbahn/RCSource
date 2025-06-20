@@ -109,7 +109,7 @@ void URCAbilitySystemComponent::CancelAbilitiesByFunc(TShouldCancelAbilityFunc S
         URCGameplayAbility* RCAbilityCDO = Cast<URCGameplayAbility>(AbilitySpec.Ability);
         if (!RCAbilityCDO)
         {
-            UE_LOG(LogTemp, Error, TEXT("CancelAbilitiesByFunc: Non-RCGameplayAbility %s was Granted to ASC. Skipping."), *AbilitySpec.Ability.GetName());
+            UE_LOG(LogRCAbilitySystem, Error, TEXT("CancelAbilitiesByFunc: Non-RCGameplayAbility %s was Granted to ASC. Skipping."), *AbilitySpec.Ability.GetName());
             continue;
         }
 
@@ -131,7 +131,7 @@ PRAGMA_ENABLE_DEPRECATION_WARNINGS
                 }
                 else
                 {
-                    UE_LOG(LogTemp, Error, TEXT("CancelAbilitiesByFunc: Can't cancel ability [%s] because CanBeCanceled is false."), *RCAbilityInstance->GetName());
+                    UE_LOG(LogRCAbilitySystem, Error, TEXT("CancelAbilitiesByFunc: Can't cancel ability [%s] because CanBeCanceled is false."), *RCAbilityInstance->GetName());
                 }
             }
         }
@@ -187,20 +187,9 @@ PRAGMA_ENABLE_DEPRECATION_WARNINGS
 
 int32 URCAbilitySystemComponent::HandleGameplayEvent(FGameplayTag EventTag, const FGameplayEventData* Payload)
 {
-    UE_LOG(LogTemp, Warning, TEXT("[ASC] HandleGameplayEvent: %s"), *EventTag.ToString());
+    UE_LOG(LogRCAbilitySystem, Warning, TEXT("[ASC] HandleGameplayEvent: %s"), *EventTag.ToString());
     return Super::HandleGameplayEvent(EventTag, Payload);
 }
-
-/*
-void URCAbilitySystemComponent::AddAbilitySet(URCAbilitySet* AbilitySet)
-{
-    if (AbilitySet)
-    {
-        UE_LOG(LogTemp, Log, TEXT("[ASC] Granting AbilitySet %s"), *AbilitySet->GetName());
-        AbilitySet->GiveAbilities(this);
-    }
-}
-*/
 
 void URCAbilitySystemComponent::AbilityInputTagPressed(const FGameplayTag& InputTag)
 {
@@ -415,7 +404,7 @@ void URCAbilitySystemComponent::ClientNotifyAbilityFailed_Implementation(const U
 
 void URCAbilitySystemComponent::HandleAbilityFailed(const UGameplayAbility* Ability, const FGameplayTagContainer& FailureReason)
 {
-	//UE_LOG(LogRCAbilitySystem, Warning, TEXT("Ability %s failed to activate (tags: %s)"), *GetPathNameSafe(Ability), *FailureReason.ToString());
+	UE_LOG(LogRCAbilitySystem, Warning, TEXT("Ability %s failed to activate (tags: %s)"), *GetPathNameSafe(Ability), *FailureReason.ToString());
 
 	if (const URCGameplayAbility* RCAbility = Cast<const URCGameplayAbility>(Ability))
 	{
@@ -476,7 +465,7 @@ void URCAbilitySystemComponent::AddAbilityToActivationGroup(ERCAbilityActivation
     const int32 ExclusiveCount = ActivationGroupCounts[(uint8)ERCAbilityActivationGroup::Exclusive_Replaceable] + ActivationGroupCounts[(uint8)ERCAbilityActivationGroup::Exclusive_Blocking];
     if (!ensure(ExclusiveCount <= 1))
     {
-        UE_LOG(LogTemp, Error, TEXT("AddAbilityToActivationGroup: Multiple exclusive abilities are running."));
+        UE_LOG(LogRCAbilitySystem, Error, TEXT("AddAbilityToActivationGroup: Multiple exclusive abilities are running."));
     }
 }
 
@@ -545,8 +534,7 @@ void URCAbilitySystemComponent::GetAbilityTargetData(const FGameplayAbilitySpecH
 	}
 }
 
-
-
+// Added ability tag checks
 bool URCAbilitySystemComponent::IsAbilityActiveByTag(FGameplayTag AbilityTag) const
 {
     for (const FGameplayAbilitySpec& Spec : ActivatableAbilities.Items)

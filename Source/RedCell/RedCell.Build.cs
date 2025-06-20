@@ -7,8 +7,7 @@ public class RedCell : ModuleRules
     public RedCell(ReadOnlyTargetRules Target) : base(Target)
     {
         PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
-
-        // === Path setup exactly like Lyra ===
+        
         // Tells UBT to look in Source/RedCell/RedCell for all headers
         PublicIncludePaths.AddRange(
             new string[] {
@@ -21,8 +20,7 @@ public class RedCell : ModuleRules
                 // (keep empty for now)
             }
         );
-
-        // === dependencies ===
+        
         PublicDependencyModuleNames.AddRange(
             new string[] {
                 "Core",
@@ -32,6 +30,13 @@ public class RedCell : ModuleRules
                 "Engine",
                 "PhysicsCore",
                 "InputCore",
+                "GameplayCameras",
+                "MotionWarping",
+                "AnimGraphRuntime",
+                "AnimationWarpingRuntime",
+                "Chooser",
+                "PoseSearch",
+                "StructUtils",
                 "GameplayAbilities",
                 "GameplayTags",
                 "GameplayTasks",
@@ -43,32 +48,36 @@ public class RedCell : ModuleRules
                 "CommonLoadingScreen",
                 "Niagara",
                 "GameFeatures",
+                "SignificanceManager",
                 "AsyncMixin",
-                // if using GAS:
-                // "GameplayAbilities",
-                // "GameplayTags",
-                // "GameplayTasks",
+                "PropertyPath",
             }
         );
 
         PrivateDependencyModuleNames.AddRange(
             new string[] {
-                // e.g. "Slate", "SlateCore" if you need them
                 "InputCore",
-                "Slate",           // Lyra has these
-                "SlateCore",       // in its PrivateDependencies
+                "Slate",
+                "SlateCore",
                 "EnhancedInput",
+                "MotionWarping",
                 "NetCore",
+                "Projects",
+                "Gauntlet",
                 "DeveloperSettings",
+                "RHI",
                 "CommonUI",
-                "CommonInput",     // needed by the CommonUI ScaleBox slot
+                "CommonInput",
+                "GameSettings",
                 "CommonGame",
                 "CommonUser",
                 "GameplayMessageRuntime",
-                "AudioMixer",
                 "UIExtension",
+                "ClientPilot",
                 "AudioModulation",
                 "EngineSettings",
+                "DTLSHandlerComponent",
+                "Json",
             }
         );
         

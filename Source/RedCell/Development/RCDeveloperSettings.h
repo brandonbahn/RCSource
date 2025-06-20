@@ -37,7 +37,7 @@ struct FRCCheatToRun
 /**
  * Developer settings / editor cheats
  */
-UCLASS(config=EditorPerProjectUserSettings, MinimalAPI)
+UCLASS(config=EditorPerProjectUserSettings, MinimalAPI, meta=(DisplayName = "RedCell Developer Settings"))
 class URCDeveloperSettings : public UDeveloperSettingsBackedByCVars
 {
 	GENERATED_BODY()

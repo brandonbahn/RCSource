@@ -11,6 +11,7 @@
 #include "RCGameState.h"
 #include "System/RCGameSession.h"
 #include "Player/RCPlayerController.h"
+#include "RCGameplayTags.h"
 #include "Player/RCPlayerState.h"
 #include "GameModes/RCGameState.h"
 #include "Character/RCCharacter.h"
@@ -28,6 +29,7 @@
 #include "CommonSessionSubsystem.h"
 #include "TimerManager.h"
 #include "GameMapsSettings.h"
+#include "Components/GameFrameworkComponentManager.h"
 
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(RCGameMode)
@@ -45,14 +47,21 @@ ARCGameMode::ARCGameMode(const FObjectInitializer& ObjectInitializer)
 
 const URCPawnData* ARCGameMode::GetPawnDataForController(const AController* InController) const
 {
+	UE_LOG(LogRC, Warning, TEXT("GameMode GetPawnDataForController called for %s"), *GetNameSafe(InController));
     // See if pawn data is already set on the player state
     if (InController != nullptr)
     {
         if (const ARCPlayerState* RCPS = InController->GetPlayerState<ARCPlayerState>())
         {
+        	UE_LOG(LogTemp, Warning, TEXT("Found PlayerState: %s"), *GetNameSafe(RCPS));
             if (const URCPawnData* PawnData = RCPS->GetPawnData<URCPawnData>())
             {
+            	UE_LOG(LogTemp, Warning, TEXT("PlayerState has PawnData: %s"), *GetNameSafe(PawnData));
                 return PawnData;
+            }
+            else
+            {
+            	UE_LOG(LogTemp, Warning, TEXT("PlayerState has NO PawnData"));
             }
         }
     }
@@ -62,19 +71,24 @@ const URCPawnData* ARCGameMode::GetPawnDataForController(const AController* InCo
     URCExperienceManagerComponent* ExperienceComponent = GameState->FindComponentByClass<URCExperienceManagerComponent>();
     check(ExperienceComponent);
 
+	UE_LOG(LogTemp, Warning, TEXT("Experience loaded: %s"), ExperienceComponent->IsExperienceLoaded() ? TEXT("YES") : TEXT("NO"));
     if (ExperienceComponent->IsExperienceLoaded())
     {
         const URCExperienceDefinition* Experience = ExperienceComponent->GetCurrentExperienceChecked();
+    	UE_LOG(LogTemp, Warning, TEXT("Experience: %s, DefaultPawnData: %s"), *GetNameSafe(Experience), *GetNameSafe(Experience->DefaultPawnData));
         if (Experience->DefaultPawnData != nullptr)
         {
             return Experience->DefaultPawnData;
         }
 
         // Experience is loaded and there's still no pawn data, fall back to the default for now
+    	const URCPawnData* DefaultPawnData = URCAssetManager::Get().GetDefaultPawnData();
+    	UE_LOG(LogTemp, Warning, TEXT("AssetManager DefaultPawnData: %s"), *GetNameSafe(DefaultPawnData));
         return URCAssetManager::Get().GetDefaultPawnData();
     }
 
     // Experience not loaded yet, so there is no pawn data to be had
+	UE_LOG(LogTemp, Warning, TEXT("Experience not loaded, returning nullptr"));
     return nullptr;
 }
 
@@ -378,16 +392,84 @@ APawn* ARCGameMode::SpawnDefaultPawnAtTransform_Implementation(AController* NewP
         }
         else
         {
-            UE_LOG(LogTemp, Error, TEXT("Game mode was unable to spawn Pawn of class [%s] at [%s]."), *GetNameSafe(PawnClass), *SpawnTransform.ToHumanReadableString());
+            UE_LOG(LogRC, Error, TEXT("Game mode was unable to spawn Pawn of class [%s] at [%s]."), *GetNameSafe(PawnClass), *SpawnTransform.ToHumanReadableString());
         }
     }
     else
     {
-        UE_LOG(LogTemp, Error, TEXT("Game mode was unable to spawn Pawn due to NULL pawn class."));
+        UE_LOG(LogRC, Error, TEXT("Game mode was unable to spawn Pawn due to NULL pawn class."));
     }
 
     return nullptr;
 }
+
+bool ARCGameMode::ShouldSpawnAtStartSpot(AController* Player)
+{
+	// We never want to use the start spot, always use the spawn management component.
+	return false;
+}
+
+void ARCGameMode::HandleStartingNewPlayer_Implementation(APlayerController* NewPlayer)
+{
+	// Delay starting new players until the experience has been loaded
+	// (players who log in prior to that will be started by OnExperienceLoaded)
+	if (IsExperienceLoaded())
+	{
+		Super::HandleStartingNewPlayer_Implementation(NewPlayer);
+	}
+}
+
+AActor* ARCGameMode::ChoosePlayerStart_Implementation(AController* Player)
+{
+	if (URCPlayerSpawningManagerComponent* PlayerSpawningComponent = GameState->FindComponentByClass<URCPlayerSpawningManagerComponent>())
+	{
+		return PlayerSpawningComponent->ChoosePlayerStart(Player);
+	}
+	
+	return Super::ChoosePlayerStart_Implementation(Player);
+}
+
+void ARCGameMode::FinishRestartPlayer(AController* NewPlayer, const FRotator& StartRotation)
+{
+	if (URCPlayerSpawningManagerComponent* PlayerSpawningComponent = GameState->FindComponentByClass<URCPlayerSpawningManagerComponent>())
+	{
+		PlayerSpawningComponent->FinishRestartPlayer(NewPlayer, StartRotation);
+	}
+
+	Super::FinishRestartPlayer(NewPlayer, StartRotation);
+}
+
+bool ARCGameMode::PlayerCanRestart_Implementation(APlayerController* Player)
+{
+	return ControllerCanRestart(Player);
+}
+
+bool ARCGameMode::ControllerCanRestart(AController* Controller)
+{
+	if (APlayerController* PC = Cast<APlayerController>(Controller))
+	{	
+		if (!Super::PlayerCanRestart_Implementation(PC))
+		{
+			return false;
+		}
+	}
+	else
+	{
+		// Bot version of Super::PlayerCanRestart_Implementation
+		if ((Controller == nullptr) || Controller->IsPendingKillPending())
+		{
+			return false;
+		}
+	}
+
+	if (URCPlayerSpawningManagerComponent* PlayerSpawningComponent = GameState->FindComponentByClass<URCPlayerSpawningManagerComponent>())
+	{
+		return PlayerSpawningComponent->ControllerCanRestart(Controller);
+	}
+
+	return true;
+}
+
 
 void ARCGameMode::InitGameState()
 {
@@ -397,4 +479,55 @@ void ARCGameMode::InitGameState()
 	URCExperienceManagerComponent* ExperienceComponent = GameState->FindComponentByClass<URCExperienceManagerComponent>();
 	check(ExperienceComponent);
 	ExperienceComponent->CallOrRegister_OnExperienceLoaded(FOnRCExperienceLoaded::FDelegate::CreateUObject(this, &ThisClass::OnExperienceLoaded));
+}
+
+void ARCGameMode::RequestPlayerRestartNextFrame(AController* Controller, bool bForceReset)
+{
+	if (bForceReset && (Controller != nullptr))
+	{
+		Controller->Reset();
+	}
+
+	if (APlayerController* PC = Cast<APlayerController>(Controller))
+	{
+		GetWorldTimerManager().SetTimerForNextTick(PC, &APlayerController::ServerRestartPlayer_Implementation);
+	}
+}
+
+bool ARCGameMode::UpdatePlayerStartSpot(AController* Player, const FString& Portal, FString& OutErrorMessage)
+{
+	// Do nothing, we'll wait until PostLogin when we try to spawn the player for real.
+	// Doing anything right now is no good, systems like team assignment haven't even occurred yet.
+	return true;
+}
+
+void ARCGameMode::FailedToRestartPlayer(AController* NewPlayer)
+{
+	Super::FailedToRestartPlayer(NewPlayer);
+
+	// If we tried to spawn a pawn and it failed, lets try again *note* check if there's actually a pawn class
+	// before we try this forever.
+	if (UClass* PawnClass = GetDefaultPawnClassForController(NewPlayer))
+	{
+		if (APlayerController* NewPC = Cast<APlayerController>(NewPlayer))
+		{
+			// If it's a player don't loop forever, maybe something changed and they can no longer restart if so stop trying.
+			if (PlayerCanRestart(NewPC))
+			{
+				RequestPlayerRestartNextFrame(NewPlayer, false);			
+			}
+			else
+			{
+				UE_LOG(LogRC, Verbose, TEXT("FailedToRestartPlayer(%s) and PlayerCanRestart returned false, so we're not going to try again."), *GetPathNameSafe(NewPlayer));
+			}
+		}
+		else
+		{
+			RequestPlayerRestartNextFrame(NewPlayer, false);
+		}
+	}
+	else
+	{
+		UE_LOG(LogRC, Verbose, TEXT("FailedToRestartPlayer(%s) but there's no pawn class so giving up."), *GetPathNameSafe(NewPlayer));
+	}
 }

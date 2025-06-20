@@ -15,6 +15,9 @@ class URCAbilityTagRelationshipMapping;
 class UObject;
 struct FFrame;
 struct FGameplayAbilityTargetDataHandle;
+
+REDCELL_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Gameplay_AbilityInputBlocked);
+
 /**
  * Custom ASC for RedCell that can receive AbilitySets and log incoming events.
  */

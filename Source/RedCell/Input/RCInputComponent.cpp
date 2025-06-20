@@ -4,6 +4,7 @@
 #include "RCInputComponent.h"
 
 #include "EnhancedInputSubsystems.h"
+#include "Player/RCLocalPlayer.h"
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(RCInputComponent)
 

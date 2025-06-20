@@ -5,7 +5,9 @@
 #include "CoreMinimal.h"
 #include "Components/PawnComponent.h"
 #include "Components/GameFrameworkInitStateInterface.h"
+#include "GameFeatures/GameFeatureAction_AddInputContextMapping.h"
 #include "GameplayAbilitySpecHandle.h"
+#include "RCPawnExtensionComponent.h"
 #include "Input/RCInputConfig.h"
 #include "AbilitySystem/RCAbilitySystemComponent.h"
 #include "RCHeroComponent.generated.h"
@@ -16,6 +18,7 @@ struct FMappableConfigPair;
 
 class UGameFrameworkComponentManager;
 class UInputComponent;
+class UInputMappingContext;
 class URCInputConfig;
 class UObject;
 struct FActorInitStateChangedParams;
@@ -74,21 +77,43 @@ protected:
     void Input_AbilityInputTagPressed(FGameplayTag InputTag);
     void Input_AbilityInputTagReleased(FGameplayTag InputTag);
 
-protected:
+    void Input_Move(const FInputActionValue& InputActionValue);
+    void Input_MoveWorldSpace(const FInputActionValue& InputActionValue);
+    void Input_LookMouse(const FInputActionValue& InputActionValue);
+    void Input_LookGamepad(const FInputActionValue& InputActionValue);
+    void Input_Crouch(const FInputActionValue& InputActionValue);
+    void Input_Run(const FInputActionValue& InputActionValue);
+    void Input_Walk(const FInputActionValue& InputActionValue);
+    void Input_Sprint(const FInputActionValue& InputActionValue);
+    void Input_Strafe(const FInputActionValue& InputActionValue);
+    void Input_Aim(const FInputActionValue& InputActionValue);
 
-    //Hero component mapping context selection - will come back later
-    //UPROPERTY(EditAnywhere)
-    //TArray<FInputMappingContextAndPriority> DefaultInputMappings;
+protected:
+    // Helper functions for managing input state tags
+    void SetInputStateTag(const FGameplayTag& Tag, bool bEnabled);
+    bool HasInputStateTag(const FGameplayTag& Tag) const;
+
+    UFUNCTION(Server, Reliable)
+    void ServerSetInputStateTag(FGameplayTag Tag, bool bEnabled);
+    UFUNCTION(Server, Reliable)
+    void ServerUpdateMovementInput(float Magnitude, FVector InputVector);
+
+    // Get the ability system component for tag operations
+    URCAbilitySystemComponent* GetAbilitySystemComponent() const;
+
+protected:    
+
+    UPROPERTY(EditAnywhere)
+    TArray<FInputMappingContextAndPriority> DefaultInputMappings;
 
     /** True when player input bindings have been applied, will never be true for non - players */
     bool bReadyToBindInputs;
-    
-    /** The DataAsset that drives ability‑input tag mappings */
-    UPROPERTY(EditDefaultsOnly, Category = "Abilities|Input")
-    URCInputConfig* RCInputConfig;
 
     /** The pawn's ability system component, once initialized */
     UPROPERTY()
     URCAbilitySystemComponent* AbilitySystemComponent;
 
+private:
+    UPROPERTY()
+    ARCCharacter* CachedCharacter = nullptr;
 };

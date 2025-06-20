@@ -3,12 +3,15 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Camera/RCCameraProperties.h"
+#include "Core/CameraEvaluationContext.h"
 #include "Engine/DataAsset.h"
 #include "RCPawnData.generated.h"
 
 class APawn;
 class URCAbilitySet;
 class URCAbilityTagRelationshipMapping;
+class UCameraRigAsset;
 class URCInputConfig;
 class UObject;
 
@@ -44,6 +47,18 @@ public:
     // Input configuration used by player controlled pawns to create input mappings and bind input actions.
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "RedCell|Input")
     TObjectPtr<URCInputConfig> InputConfig;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "GameplayCamera")
+    TObjectPtr<UCameraAsset> CameraAsset;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "GameplayCamera")
+    TObjectPtr<UCameraRigAsset> PersistentGlobalCameraRig;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "GameplayCamera") 
+    TObjectPtr<UCameraRigAsset> PersistentBaseCameraRig;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "GameplayCamera")
+    ECameraStyle DefaultCameraStyle = ECameraStyle::Balanced;
 
     /** (Optional) Portrait, DisplayName, etc. for UI */
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="UI")

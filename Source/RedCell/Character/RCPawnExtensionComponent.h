@@ -13,6 +13,7 @@ namespace EEndPlayReason { enum Type : int; }
 class UGameFrameworkComponentManager;
 class URCAbilitySystemComponent;
 class URCPawnExtensionComponent;
+class UCameraAsset;
 class URCPawnData;
 class UObject;
 struct FActorInitStateChangedParams;
@@ -58,6 +59,9 @@ public:
     UFUNCTION(BlueprintPure, Category = "RedCell|Pawn")
     URCAbilitySystemComponent* GetRCAbilitySystemComponent() const { return AbilitySystemComponent; }
 
+    UFUNCTION(BlueprintImplementableEvent, Category = "Camera", meta = (DisplayName = "Setup Camera"))
+    void SetupCamera(APlayerController* PlayerController, UCameraAsset* CameraAsset);
+
     /** Should be called by the owning pawn to become the avatar of the ability system. */
     void InitializeAbilitySystem(URCAbilitySystemComponent* InASC, AActor* InOwnerActor);
 
@@ -95,7 +99,7 @@ protected:
     FSimpleMulticastDelegate OnAbilitySystemUninitialized;
 
     /** Pawn data used to create the pawn. Specified from a spawn function or on a placed instance. */
-    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, ReplicatedUsing = OnRep_PawnData, Category = "RedCell|Pawn")
+    UPROPERTY(EditInstanceOnly, ReplicatedUsing = OnRep_PawnData, Category = "RedCell|Pawn")
     TObjectPtr<const URCPawnData> PawnData;
 
     /** Pointer to the ability system component that is cached for convenience. */

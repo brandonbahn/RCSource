@@ -27,7 +27,7 @@ public:
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "RedCell|Pickup|Equipment")
     TSubclassOf<URCInventoryItemDefinition> InventoryItemDefinition;
 
-    //Visual representation of the pickup as static mesh
+    //Visual representation of the pickup
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "RedCell|Pickup|Mesh")
     TObjectPtr<UStaticMesh> DisplayMesh;
 

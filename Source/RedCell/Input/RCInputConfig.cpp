@@ -35,3 +35,17 @@ const UInputAction* URCInputConfig::FindAbilityInputActionForTag(const FGameplay
 
     return nullptr;
 }
+
+FVector2D URCInputConfig::GetMovementInputScaleValue(const FVector2D& Input) const
+{
+    switch (MovementStickMode)
+    {
+    default:
+    case EMovementStickMode::FixedSpeedSingleGait:
+    case EMovementStickMode::FixedSpeedWalkRun:
+        return Input.GetSafeNormal();
+    case EMovementStickMode::VariableSpeedSingleGait:
+    case EMovementStickMode::VariableSpeedWalkRun:
+        return Input;
+    }
+}

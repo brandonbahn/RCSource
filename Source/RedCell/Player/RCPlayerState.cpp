@@ -16,6 +16,7 @@
 #include "GameplayEffectTypes.h"
 #include "RCPlayerController.h"
 #include "GameModes/RCGameMode.h"
+#include "Messages/RCVerbMessage.h"
 #include "RCLogChannels.h"
 #include "Net/UnrealNetwork.h"
 
@@ -39,7 +40,7 @@ ARCPlayerState::ARCPlayerState(const FObjectInitializer& ObjectInitializer)
     // Mixed mode so that GameplayEffects and attribute changes
     // Goes to *only* the owning client.
     
-    // 2) Create the HealthSet
+    // These attribute sets will be detected by AbilitySystemComponent::InitializeComponent. Keeping a reference so that the sets don't get garbage collected before that.
     HealthSet = CreateDefaultSubobject<URCHealthSet>(TEXT("HealthSet"));
     CombatSet = CreateDefaultSubobject<URCCombatSet>(TEXT("CombatSet"));
     CoreSet   = CreateDefaultSubobject<URCCoreSet>(TEXT("CoreSet"));
@@ -128,6 +129,7 @@ void ARCPlayerState::PostInitializeComponents()
     Super::PostInitializeComponents();
 
     check(AbilitySystemComponent);
+    UE_LOG(LogRC, Warning, TEXT("PlayerState PostInit: GetPawn() = %s"), *GetNameSafe(GetPawn()));
     AbilitySystemComponent->InitAbilityActorInfo(this, GetPawn());
 
     UWorld* World = GetWorld();
@@ -160,13 +162,16 @@ void ARCPlayerState::SetPawnData(const URCPawnData* InPawnData)
     MARK_PROPERTY_DIRTY_FROM_NAME(ThisClass, PawnData, this);
     PawnData = InPawnData;
 
+    UE_LOG(LogTemp, Warning, TEXT("PlayerState: About to grant AbilitySets"));
     for (const URCAbilitySet* AbilitySet : PawnData->AbilitySets)
     {
         if (AbilitySet)
         {
+            UE_LOG(LogTemp, Warning, TEXT("PlayerState: Granting AbilitySet: %s"), *GetNameSafe(AbilitySet));
             AbilitySet->GiveToAbilitySystem(AbilitySystemComponent, nullptr);
         }
     }
+    UE_LOG(LogTemp, Warning, TEXT("PlayerState: Finished granting AbilitySets"));
 
     UGameFrameworkComponentManager::SendGameFrameworkComponentExtensionEvent(this, NAME_RCAbilityReady);
     
@@ -177,3 +182,10 @@ void ARCPlayerState::OnRep_PawnData()
 {
 }
 
+void ARCPlayerState::ClientBroadcastMessage_Implementation(const FRCVerbMessage Message)
+{
+    if (GetNetMode() == NM_Client)
+    {
+        UGameplayMessageSubsystem::Get(this).BroadcastMessage(Message.Verb, Message);
+    } 
+}

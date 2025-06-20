@@ -12,7 +12,7 @@
 #include "GameFeatureAction.h"
 #include "GameFeaturesSubsystemSettings.h"
 #include "TimerManager.h"
-#include "Settings/RCSettingsLocal.h"
+//#include "Settings/RCSettingsLocal.h"
 #include "RCLogChannels.h"
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(RCExperienceManagerComponent)
@@ -355,9 +355,9 @@ void URCExperienceManagerComponent::OnExperienceFullLoadCompleted()
 	OnExperienceLoaded_LowPriority.Clear();
 
 	// Apply any necessary scalability settings
-#if !UE_SERVER
-	URCSettingsLocal::Get()->OnExperienceLoaded();
-#endif
+//#if !UE_SERVER
+//	URCSettingsLocal::Get()->OnExperienceLoaded();
+//#endif
 }
 
 void URCExperienceManagerComponent::OnActionDeactivationCompleted()

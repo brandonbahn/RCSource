@@ -9,4 +9,6 @@ URCPawnData::URCPawnData(const FObjectInitializer& ObjectInitializer)
 {
     PawnClass = nullptr;
     InputConfig = nullptr;
+    PersistentGlobalCameraRig = nullptr;
+    PersistentBaseCameraRig = nullptr;
 }

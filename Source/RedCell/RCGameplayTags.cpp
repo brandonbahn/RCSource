@@ -22,16 +22,25 @@ namespace RCGameplayTags
 
     UE_DEFINE_GAMEPLAY_TAG_COMMENT(Ability_Behavior_SurvivesDeath, "Ability.Behavior.SurvivesDeath", "An ability with this type tag should not be canceled due to death.");
 
-    UE_DEFINE_GAMEPLAY_TAG_COMMENT(InputTag_Slide, "InputTag.Slide", "Slide input.");
+    UE_DEFINE_GAMEPLAY_TAG_COMMENT(Ability_Type_Action_Traverse, "Ability.Type.Action.Traverse", "An ability action tag for Traversal.");
+    
     UE_DEFINE_GAMEPLAY_TAG_COMMENT(InputTag_Move, "InputTag.Move", "Move input.");
+    UE_DEFINE_GAMEPLAY_TAG_COMMENT(InputTag_MoveWorldSpace, "InputTag.MoveWorldSpace", "Move input Worldspace.");
     UE_DEFINE_GAMEPLAY_TAG_COMMENT(InputTag_Look_Mouse, "InputTag.Look.Mouse", "Look (mouse) input.");
-    UE_DEFINE_GAMEPLAY_TAG_COMMENT(InputTag_Look_Stick, "InputTag.Look.Stick", "Look (stick) input.");
+    UE_DEFINE_GAMEPLAY_TAG_COMMENT(InputTag_Look_Gamepad, "InputTag.Look.Gamepad", "Look (stick) input.");
     UE_DEFINE_GAMEPLAY_TAG_COMMENT(InputTag_Crouch, "InputTag.Crouch", "Crouch input.");
-    UE_DEFINE_GAMEPLAY_TAG_COMMENT(InputTag_AutoRun, "InputTag.AutoRun", "Auto-run input.");
+    UE_DEFINE_GAMEPLAY_TAG_COMMENT(InputTag_Run, "InputTag.Run", "Run input.");
+    UE_DEFINE_GAMEPLAY_TAG_COMMENT(InputTag_Walk, "InputTag.Walk", "Walk input.");
+    UE_DEFINE_GAMEPLAY_TAG_COMMENT(InputTag_Sprint, "InputTag.Sprint", "Sprint input.");
+    UE_DEFINE_GAMEPLAY_TAG_COMMENT(InputTag_Strafe, "InputTag.Strafe", "Strafe input.");
+    UE_DEFINE_GAMEPLAY_TAG_COMMENT(InputTag_Aim, "InputTag.Aim", "Aim input.");
 
-
+    UE_DEFINE_GAMEPLAY_TAG_COMMENT(InputState_WantsToWalk, "InputState.WantsToWalk", "Player input wants to walk");
+    UE_DEFINE_GAMEPLAY_TAG_COMMENT(InputState_WantsToSprint, "InputState.WantsToSprint", "Player input wants to sprint");
+    UE_DEFINE_GAMEPLAY_TAG_COMMENT(InputState_WantsToStrafe, "InputState.WantsToStrafe", "Player input wants to strafe");
+    UE_DEFINE_GAMEPLAY_TAG_COMMENT(InputState_WantsToAim, "InputState.WantsToAim", "Player input wants to aim");
+    
     UE_DEFINE_GAMEPLAY_TAG_COMMENT(InitState_Spawned, "InitState.Spawned", "1: Actor/component has initially spawned and can be extended");
-
     UE_DEFINE_GAMEPLAY_TAG_COMMENT(InitState_DataAvailable, "InitState.DataAvailable", "2: All required data has been loaded/replicated and is ready for initialization");
     UE_DEFINE_GAMEPLAY_TAG_COMMENT(InitState_DataInitialized, "InitState.DataInitialized", "3: The available data has been initialized for this actor/component, but it is not ready for full gameplay");
     UE_DEFINE_GAMEPLAY_TAG_COMMENT(InitState_GameplayReady, "InitState.GameplayReady", "4: The actor/component is fully ready for active gameplay");
@@ -50,9 +59,6 @@ namespace RCGameplayTags
 
     UE_DEFINE_GAMEPLAY_TAG_COMMENT(SetByCaller_Damage, "SetByCaller.Damage", "SetByCaller tag used by damage gameplay effects.");
     UE_DEFINE_GAMEPLAY_TAG_COMMENT(SetByCaller_Heal, "SetByCaller.Heal", "SetByCaller tag used by healing gameplay effects.");
-
-    UE_DEFINE_GAMEPLAY_TAG_COMMENT(Cheat_GodMode, "Cheat.GodMode", "GodMode cheat is active on the owner.");
-    UE_DEFINE_GAMEPLAY_TAG_COMMENT(Cheat_UnlimitedHealth, "Cheat.UnlimitedHealth", "UnlimitedHealth cheat is active on the owner.");
 
     // These are mapped to the movement modes inside GetMovementModeTagMap()
     UE_DEFINE_GAMEPLAY_TAG_COMMENT(Movement_Mode_Walking, "Movement.Mode.Walking", "Default Character movement tag");
@@ -75,12 +81,40 @@ namespace RCGameplayTags
         { MOVE_Custom, Movement_Mode_Custom }
     };
 
+    // MovementSituation
+    const TMap<E_MovementSituation, FGameplayTag> MovementSituationTagMap =
+    {
+        { E_MovementSituation::OnGround,FGameplayTag::RequestGameplayTag("Movement.Situation.OnGround") },
+        { E_MovementSituation::InAir,   FGameplayTag::RequestGameplayTag("Movement.Situation.InAir") },
+    };
+    
     // Gait
     const TMap<E_Gait, FGameplayTag> GaitTagMap =
     {
         { E_Gait::Walk,   FGameplayTag::RequestGameplayTag("Movement.Gait.Walking") },
         { E_Gait::Run,    FGameplayTag::RequestGameplayTag("Movement.Gait.Running") },
         { E_Gait::Sprint, FGameplayTag::RequestGameplayTag("Movement.Gait.Sprinting") },
+    };
+    
+    // MovementState
+    const TMap<E_MovementState, FGameplayTag> MovementStateTagMap =
+    {
+        { E_MovementState::Idle,   FGameplayTag::RequestGameplayTag("Movement.State.Idle") },
+        { E_MovementState::Moving, FGameplayTag::RequestGameplayTag("Movement.State.Moving") },
+    };
+
+    // RotationMode
+    const TMap<E_RotationMode, FGameplayTag> RotationModeTagMap =
+    {
+        { E_RotationMode::OrientToMovement,FGameplayTag::RequestGameplayTag("Movement.Rotation.OrientToMovement") },
+        { E_RotationMode::Strafe,          FGameplayTag::RequestGameplayTag("Movement.Rotation.Strafe") },
+    };
+
+    // Stance
+    const TMap<E_Stance, FGameplayTag> StanceTagMap =
+    {
+        { E_Stance::Stand,  FGameplayTag::RequestGameplayTag("Movement.Stance.Standing") },
+        { E_Stance::Crouch, FGameplayTag::RequestGameplayTag("Movement.Stance.Crouched") },
     };
 
     // MovementDirection
@@ -93,33 +127,6 @@ namespace RCGameplayTags
         { E_MovementDirection::Left,     FGameplayTag::RequestGameplayTag("Movement.Direction.Left") },
     };
 
-    // MovementMode
-    const TMap<E_MovementMode, FGameplayTag> MoveModeTagMap =
-    {
-        { E_MovementMode::OnGround,   FGameplayTag::RequestGameplayTag("Movement.Mode.OnGround") },
-        { E_MovementMode::InAir, FGameplayTag::RequestGameplayTag("Movement.Mode.InAir") },
-    };
-
-    // MovementState
-    const TMap<E_MovementState, FGameplayTag> MovementStateTagMap =
-    {
-        { E_MovementState::Idle,   FGameplayTag::RequestGameplayTag("Movement.State.Idle") },
-        { E_MovementState::Moving, FGameplayTag::RequestGameplayTag("Movement.State.Moving") },
-    };
-
-    // RotationMode
-    const TMap<E_RotationMode, FGameplayTag> RotationModeTagMap =
-    {
-        { E_RotationMode::OrientToMovement,   FGameplayTag::RequestGameplayTag("Movement.Rotation.OrientToMovement") },
-        { E_RotationMode::Strafe, FGameplayTag::RequestGameplayTag("Movement.Rotation.Strafe") },
-    };
-
-    // Stance
-    const TMap<E_Stance, FGameplayTag> StanceTagMap =
-    {
-        { E_Stance::Stand,  FGameplayTag::RequestGameplayTag("Movement.Stance.Standing") },
-        { E_Stance::Crouch, FGameplayTag::RequestGameplayTag("Movement.Stance.Crouched") },
-    };
 
     // Custom Movement Modes
     const TMap<uint8, FGameplayTag> CustomMovementModeTagMap =
