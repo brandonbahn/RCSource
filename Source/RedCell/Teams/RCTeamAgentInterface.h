@@ -11,7 +11,7 @@
 
 template <typename InterfaceType> class TScriptInterface;
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnRedCellTeamIndexChangedDelegate, UObject*, ObjectChangingTeam, int32, OldTeamID, int32, NewTeamID);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnRCTeamIndexChangedDelegate, UObject*, ObjectChangingTeam, int32, OldTeamID, int32, NewTeamID);
 
 inline int32 GenericTeamIdToInteger(FGenericTeamId ID)
 {
@@ -34,13 +34,13 @@ class REDCELL_API IRCTeamAgentInterface : public IGenericTeamAgentInterface
 {
 	GENERATED_IINTERFACE_BODY()
 
-	virtual FOnRedCellTeamIndexChangedDelegate* GetOnTeamIndexChangedDelegate() { return nullptr; }
+	virtual FOnRCTeamIndexChangedDelegate* GetOnTeamIndexChangedDelegate() { return nullptr; }
 
 	static void ConditionalBroadcastTeamChanged(TScriptInterface<IRCTeamAgentInterface> This, FGenericTeamId OldTeamID, FGenericTeamId NewTeamID);
 	
-	FOnRedCellTeamIndexChangedDelegate& GetTeamChangedDelegateChecked()
+	FOnRCTeamIndexChangedDelegate& GetTeamChangedDelegateChecked()
 	{
-		FOnRedCellTeamIndexChangedDelegate* Result = GetOnTeamIndexChangedDelegate();
+		FOnRCTeamIndexChangedDelegate* Result = GetOnTeamIndexChangedDelegate();
 		check(Result);
 		return *Result;
 	}

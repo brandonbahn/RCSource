@@ -5,6 +5,8 @@
 #include "CoreMinimal.h"
 #include "AbilitySystemInterface.h"
 #include "ModularPlayerState.h"
+#include "System/GameplayTagStack.h"
+#include "Teams/RCTeamAgentInterface.h"
 #include "AbilitySystem/RCAbilitySystemComponent.h"
 #include "AbilitySystem/Attributes/RCHealthSet.h"
 #include "AbilitySystem/Attributes/RCCoreSet.h"
@@ -25,13 +27,31 @@ class UObject;
 struct FFrame;
 struct FGameplayTag;
 
+/** Defines the types of client connected */
+UENUM()
+enum class ERCPlayerConnectionType : uint8
+{
+	// An active player
+	Player = 0,
+
+	// Spectator connected to a running game
+	LiveSpectator,
+
+	// Spectating a demo recording offline
+	ReplaySpectator,
+
+	// A deactivated player (disconnected)
+	InactivePlayer
+};
+
+
 /**
  * ARCPlayerState
  *
  *    Base player state class used by this project.
  */
 UCLASS(Config = Game)
-class REDCELL_API ARCPlayerState : public AModularPlayerState, public IAbilitySystemInterface
+class REDCELL_API ARCPlayerState : public AModularPlayerState, public IAbilitySystemInterface, public IRCTeamAgentInterface
 {
   GENERATED_BODY()
 
@@ -64,8 +84,49 @@ public:
     virtual void OnDeactivated() override;
     virtual void OnReactivated() override;
     //~End of APlayerState interface
+
+	//~IRCTeamAgentInterface interface
+	virtual void SetGenericTeamId(const FGenericTeamId& NewTeamID) override;
+	virtual FGenericTeamId GetGenericTeamId() const override;
+	virtual FOnRCTeamIndexChangedDelegate* GetOnTeamIndexChangedDelegate() override;
+	//~End of IRCTeamAgentInterface interface
     
     static const FName NAME_RCAbilityReady;
+
+	void SetPlayerConnectionType(ERCPlayerConnectionType NewType);
+	ERCPlayerConnectionType GetPlayerConnectionType() const { return MyPlayerConnectionType; }
+
+	/** Returns the Squad ID of the squad the player belongs to. */
+	UFUNCTION(BlueprintCallable)
+	int32 GetSquadId() const
+	{
+		return MySquadID;
+	}
+
+	/** Returns the Team ID of the team the player belongs to. */
+	UFUNCTION(BlueprintCallable)
+	int32 GetTeamId() const
+	{
+		return GenericTeamIdToInteger(MyTeamID);
+	}
+
+	void SetSquadID(int32 NewSquadID);
+
+	// Adds a specified number of stacks to the tag (does nothing if StackCount is below 1)
+	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category=Teams)
+	void AddStatTagStack(FGameplayTag Tag, int32 StackCount);
+
+	// Removes a specified number of stacks from the tag (does nothing if StackCount is below 1)
+	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category=Teams)
+	void RemoveStatTagStack(FGameplayTag Tag, int32 StackCount);
+
+	// Returns the stack count of the specified tag (or 0 if the tag is not present)
+	UFUNCTION(BlueprintCallable, Category=Teams)
+	int32 GetStatTagStackCount(FGameplayTag Tag) const;
+
+	// Returns true if there is at least one stack of the specified tag
+	UFUNCTION(BlueprintCallable, Category=Teams)
+	bool HasStatTag(FGameplayTag Tag) const;
 
 	// Send a message to just this player
 	// (use only for client notifications like accolades, quest toasts, etc... that can handle being occasionally lost)
@@ -106,5 +167,26 @@ private:
     // Core attribute set used by this actor.
     UPROPERTY()
     TObjectPtr<URCCoreSet> CoreSet;
-    
+
+	UPROPERTY(Replicated)
+	ERCPlayerConnectionType MyPlayerConnectionType;
+
+	UPROPERTY()
+	FOnRCTeamIndexChangedDelegate OnTeamChangedDelegate;
+
+	UPROPERTY(ReplicatedUsing=OnRep_MyTeamID)
+	FGenericTeamId MyTeamID;
+
+	UPROPERTY(ReplicatedUsing=OnRep_MySquadID)
+	int32 MySquadID;
+
+	UPROPERTY(Replicated)
+	FGameplayTagStackContainer StatTags;
+
+private:
+	UFUNCTION()
+	void OnRep_MyTeamID(FGenericTeamId OldTeamID);
+
+	UFUNCTION()
+	void OnRep_MySquadID();
 };

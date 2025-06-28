@@ -29,7 +29,6 @@
 #include "RCLogChannels.h"
 #include "RCPreMovementTickComponent.h"
 #include "System/RCSignificanceManager.h"
-#include "AbilitySystem/RCAbilitySet.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "Traversal/RCTraversalComponent.h"
 
@@ -93,10 +92,10 @@ ARCCharacter::ARCCharacter(const FObjectInitializer& ObjInit)
     SpringArm->CameraLagMaxDistance = 200.0f;
     SpringArm->SetupAttachment(RootComponent);
 
-    GameplayCameraComponent = ObjInit.CreateDefaultSubobject<UGameplayCameraComponent>(this, TEXT("GameplayCameraComponent"));
-    GameplayCameraComponent->SetupAttachment(GetMesh());
-    GameplayCameraComponent->SetRelativeLocation(FVector(0.0f, 0.0f, 100.0f));
-    GameplayCameraComponent->SetRelativeRotation(FRotator(0.0f, 90.0, 0.0f));
+    GameplayCamera = ObjInit.CreateDefaultSubobject<UGameplayCameraComponent>(this, TEXT("GameplayCameraComponent"));
+    GameplayCamera->SetupAttachment(GetMesh());
+    GameplayCamera->SetRelativeLocation(FVector(0.0f, 0.0f, 100.0f));
+    GameplayCamera->SetRelativeRotation(FRotator(0.0f, 90.0, 0.0f));
     
     PawnExtensionComponent = ObjInit.CreateDefaultSubobject<URCPawnExtensionComponent>(this, TEXT("PawnExtensionComponent"));
     PawnExtensionComponent->OnAbilitySystemInitialized_RegisterAndCall(FSimpleMulticastDelegate::FDelegate::CreateUObject(this, &ThisClass::OnAbilitySystemInitialized));
@@ -171,11 +170,29 @@ void ARCCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLife
     DOREPLIFETIME_CONDITION(ARCCharacter, CharacterInputState, COND_SkipOwner);
     DOREPLIFETIME(ARCCharacter, CurrentMovementInputMagnitude);
     DOREPLIFETIME(ARCCharacter, CurrentMovementInputVector);
+    DOREPLIFETIME(ThisClass, MyTeamID)
 }
 
 void ARCCharacter::PreReplication(IRepChangedPropertyTracker& ChangedPropertyTracker)
 {
     Super::PreReplication(ChangedPropertyTracker);
+}
+
+void ARCCharacter::NotifyControllerChanged()
+{
+    const FGenericTeamId OldTeamId = GetGenericTeamId();
+
+    Super::NotifyControllerChanged();
+
+    // Update our team ID based on the controller
+    if (HasAuthority() && (Controller != nullptr))
+    {
+        if (IRCTeamAgentInterface* ControllerWithTeam = Cast<IRCTeamAgentInterface>(Controller))
+        {
+            MyTeamID = ControllerWithTeam->GetGenericTeamId();
+            ConditionalBroadcastTeamChanged(this, OldTeamId, MyTeamID);
+        }
+    }
 }
 
 ARCPlayerController* ARCCharacter::GetRCPlayerController() const
@@ -247,7 +264,6 @@ void ARCCharacter::OnRep_PlayerState()
     PawnExtensionComponent->HandlePlayerStateReplicated();
 }
 
-// This connects our new PlayerInputConfigs //
 void ARCCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
     Super::SetupPlayerInputComponent(PlayerInputComponent);
@@ -809,6 +825,50 @@ FTraversalCheckInputs ARCCharacter::GetTraversalCheckInputs() const
     
     return CheckInputs;
 }
+
+void ARCCharacter::SetGenericTeamId(const FGenericTeamId& NewTeamID)
+{
+    if (GetController() == nullptr)
+    {
+        if (HasAuthority())
+        {
+            const FGenericTeamId OldTeamID = MyTeamID;
+            MyTeamID = NewTeamID;
+            ConditionalBroadcastTeamChanged(this, OldTeamID, MyTeamID);
+        }
+        else
+        {
+            UE_LOG(LogRCTeams, Error, TEXT("You can't set the team ID on a character (%s) except on the authority"), *GetPathNameSafe(this));
+        }
+    }
+    else
+    {
+        UE_LOG(LogRCTeams, Error, TEXT("You can't set the team ID on a possessed character (%s); it's driven by the associated controller"), *GetPathNameSafe(this));
+    }
+}
+
+FGenericTeamId ARCCharacter::GetGenericTeamId() const
+{
+    return MyTeamID;
+}
+
+FOnRCTeamIndexChangedDelegate* ARCCharacter::GetOnTeamIndexChangedDelegate()
+{
+    return &OnTeamChangedDelegate;
+}
+
+void ARCCharacter::OnControllerChangedTeam(UObject* TeamAgent, int32 OldTeam, int32 NewTeam)
+{
+    const FGenericTeamId MyOldTeamID = MyTeamID;
+    MyTeamID = IntegerToGenericTeamId(NewTeam);
+    ConditionalBroadcastTeamChanged(this, MyOldTeamID, MyTeamID);
+}
+
+void ARCCharacter::OnRep_MyTeamID(FGenericTeamId OldTeamID)
+{
+    ConditionalBroadcastTeamChanged(this, OldTeamID, MyTeamID);
+}
+
 
 FCharacterPropertiesForCamera ARCCharacter::GetCharacterPropertiesForCamera_Implementation() const
 {

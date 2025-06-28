@@ -6,6 +6,7 @@
 
 #include "CoreMinimal.h"
 #include "CommonPlayerController.h"
+#include "Teams/RCTeamAgentInterface.h"
 #include "RCPlayerController.generated.h"
 
 class ARCHUD;
@@ -25,8 +26,8 @@ struct FFrame;
  * The base player controller class used by this project.
  */
 
-UCLASS(Blueprintable)
-class REDCELL_API ARCPlayerController : public ACommonPlayerController
+UCLASS(Config = Game, Meta = (ShortTooltip = "The base player controller class used by this project."))
+class REDCELL_API ARCPlayerController : public ACommonPlayerController, public IRCTeamAgentInterface
 {
     GENERATED_BODY()
 
@@ -63,9 +64,26 @@ public:
     virtual void PreProcessInput(const float DeltaTime, const bool bGamePaused) override;
     virtual void PostProcessInput(const float DeltaTime, const bool bGamePaused) override;
     //~End of APlayerController interface
+
+    //~IRCTeamAgentInterface interface
+    virtual void SetGenericTeamId(const FGenericTeamId& NewTeamID) override;
+    virtual FGenericTeamId GetGenericTeamId() const override;
+    virtual FOnRCTeamIndexChangedDelegate* GetOnTeamIndexChangedDelegate() override;
+    //~End of IRCTeamAgentInterface interface
     
 protected:
     virtual void AcknowledgePossession(APawn* P) override;
+
+private:
+    UPROPERTY()
+    FOnRCTeamIndexChangedDelegate OnTeamChangedDelegate;
+
+    UPROPERTY()
+    TObjectPtr<APlayerState> LastSeenPlayerState;
+
+private:
+    UFUNCTION()
+    void OnPlayerStateChangedTeam(UObject* TeamAgent, int32 OldTeam, int32 NewTeam);
 
 protected:
     // Called when the player state is set or cleared

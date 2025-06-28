@@ -12,18 +12,15 @@
 #include "Player/RCPlayerState.h"
 #include "Character/RCHealthComponent.h"
 #include "Character/RCCoreComponent.h"
-#include "AbilitySystem/RCAbilitySet.h"
 #include "AbilitySystem/RCAbilitySystemComponent.h"
-#include "Character/RCPawnData.h"
 #include "Character/RCPawnExtensionComponent.h"
-#include "Character/RCHeroComponent.h"
 #include "Character/RCMovementModes.h"
 #include "RCPreMovementTickComponent.h"
 #include "Camera/RCGameplayCameraInterface.h"
 #include "GameFramework/GameplayCameraComponent.h"
-#include "Player/RCPlayerController.h"
 #include "Traversal/TraversableObstacleComponent.h"
 #include "Traversal/RCTraversalComponent.h"
+#include "Teams/RCTeamAgentInterface.h"
 #include "RCCharacter.generated.h"
 
 class AActor;
@@ -92,7 +89,7 @@ struct FCharacterInputState
  */
 
 UCLASS(Config = Game, Meta = (ShortTooltip = "The base character pawn class used by this project."))
-class REDCELL_API ARCCharacter : public AModularCharacter, public IAbilitySystemInterface, public IGameplayCueInterface, public IGameplayTagAssetInterface, public IRCGameplayCameraInterface
+class REDCELL_API ARCCharacter : public AModularCharacter, public IAbilitySystemInterface, public IGameplayCueInterface, public IGameplayTagAssetInterface, public IRCGameplayCameraInterface, public IRCTeamAgentInterface
 {
     GENERATED_BODY()
     
@@ -126,9 +123,19 @@ public:
     virtual void PreReplication(IRepChangedPropertyTracker& ChangedPropertyTracker) override;
     //~End of AActor interface
 
+    //~APawn interface
+    virtual void NotifyControllerChanged() override;
+    //~End of APawn interface
+
+    //~IRCTeamAgentInterface interface
+    virtual void SetGenericTeamId(const FGenericTeamId& NewTeamID) override;
+    virtual FGenericTeamId GetGenericTeamId() const override;
+    virtual FOnRCTeamIndexChangedDelegate* GetOnTeamIndexChangedDelegate() override;
+    //~End of IRCTeamAgentInterface interface
+
     //~GameplayCamera interface
     virtual FCharacterPropertiesForCamera GetCharacterPropertiesForCamera_Implementation() const override;
-    //~End of GameplayCameraInterface
+    //~End of GameplayCamera interface
 
     // Sets the movement state tags for the character
     void SetMovementStateTags(
@@ -223,10 +230,6 @@ protected:
     void DestroyDueToDeath();
     void UninitAndDestroy();
     
-    /** Simple default team ID (everyone is on team 0) */
-    UPROPERTY()
-    uint8 MyTeamID = 0;
-    
     // Called when the death sequence for the character has completed
     UFUNCTION(BlueprintImplementableEvent, meta=(DisplayName="OnDeathFinished"))
     void K2_OnDeathFinished();
@@ -265,7 +268,13 @@ private:
     TObjectPtr<URCCoreComponent> CoreComponent;
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Camera", meta=(AllowPrivateAccess="true"))
-    TObjectPtr<UGameplayCameraComponent> GameplayCameraComponent;
+    TObjectPtr<UGameplayCameraComponent> GameplayCamera;
+
+    UPROPERTY(ReplicatedUsing = OnRep_MyTeamID)
+    FGenericTeamId MyTeamID;
+
+    UPROPERTY()
+    FOnRCTeamIndexChangedDelegate OnTeamChangedDelegate;
 
 public:
     // Movement input setters (called by HeroComponent)
@@ -283,8 +292,8 @@ public:
     UFUNCTION(BlueprintPure, Category = "Traversal")
     FTraversalCheckInputs GetTraversalCheckInputs() const;
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Traversal")
-    FTraversalCheckResult TraversalResult = {};
+    //UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Traversal")
+    //FTraversalCheckResult TraversalResult = {};
 
 protected:
     // Movement input state (replicated for networking)
@@ -316,5 +325,19 @@ protected:
 
     UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category="Audio")
     void PlayAudioEvent(const FGameplayTag& Value, float VolumeMultiplier, float PitchMultiplier);
-    
+
+protected:
+    // Called to determine what happens to the team ID when possession ends
+    virtual FGenericTeamId DetermineNewTeamAfterPossessionEnds(FGenericTeamId OldTeamID) const
+    {
+        // This could be changed to return, e.g., OldTeamID if you want to keep it assigned afterwards, or return an ID for some neutral faction, or etc...
+        return FGenericTeamId::NoTeam;
+    }
+
+private:
+    UFUNCTION()
+    void OnControllerChangedTeam(UObject* TeamAgent, int32 OldTeam, int32 NewTeam);
+
+    UFUNCTION()
+    void OnRep_MyTeamID(FGenericTeamId OldTeamID);
 };

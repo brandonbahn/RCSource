@@ -15,7 +15,7 @@ class UCurveFloat;
 /**
  * The base character movement component class used by this project.
  */
-UCLASS(Config = Game)
+UCLASS(Config = Game, meta = (DisplayName = "RC Move Component"))
 class REDCELL_API URCCharacterMovementComponent : public UCharacterMovementComponent
 {
 	GENERATED_BODY()

@@ -32,8 +32,8 @@ const FName ARCPlayerState::NAME_RCAbilityReady("RedCellAbilitiesReady");
 
 ARCPlayerState::ARCPlayerState(const FObjectInitializer& ObjectInitializer)
     : Super(ObjectInitializer)
+    , MyPlayerConnectionType(ERCPlayerConnectionType::Player)
 {
-    // 1) Create the ASC subobject
     AbilitySystemComponent = CreateDefaultSubobject<URCAbilitySystemComponent>(TEXT("AbilitySystemComponent"));
     AbilitySystemComponent->SetIsReplicated(true);        // Make sure it's replicated
     AbilitySystemComponent->SetReplicationMode(EGameplayEffectReplicationMode::Mixed); 
@@ -46,10 +46,13 @@ ARCPlayerState::ARCPlayerState(const FObjectInitializer& ObjectInitializer)
     CoreSet   = CreateDefaultSubobject<URCCoreSet>(TEXT("CoreSet"));
     
     // 3) Tell the ASC
-    AbilitySystemComponent->AddAttributeSetSubobject(HealthSet.Get());
+    //AbilitySystemComponent->AddAttributeSetSubobject(HealthSet.Get());
     
     // AbilitySystemComponent needs to be updated at a high frequency.
     SetNetUpdateFrequency(100.0f);
+
+    MyTeamID = FGenericTeamId::NoTeam;
+    MySquadID = INDEX_NONE;
 }
 
 void ARCPlayerState::PreInitializeComponents()
@@ -79,12 +82,35 @@ void ARCPlayerState::CopyProperties(APlayerState* PlayerState)
 
 void ARCPlayerState::OnDeactivated()
 {
-    Super::OnDeactivated();
+    bool bDestroyDeactivatedPlayerState = false;
+
+    switch (GetPlayerConnectionType())
+    {
+    case ERCPlayerConnectionType::Player:
+    case ERCPlayerConnectionType::InactivePlayer:
+        //@TODO: Ask the experience if we should destroy disconnecting players immediately or leave them around
+        // (e.g., for long running servers where they might build up if lots of players cycle through)
+        bDestroyDeactivatedPlayerState = true;
+        break;
+    default:
+        bDestroyDeactivatedPlayerState = true;
+        break;
+    }
+	
+    SetPlayerConnectionType(ERCPlayerConnectionType::InactivePlayer);
+
+    if (bDestroyDeactivatedPlayerState)
+    {
+        Destroy();
+    }
 }
 
 void ARCPlayerState::OnReactivated()
 {
-    Super::OnReactivated();
+    if (GetPlayerConnectionType() == ERCPlayerConnectionType::InactivePlayer)
+    {
+        SetPlayerConnectionType(ERCPlayerConnectionType::Player);
+    }
 }
 
 void ARCPlayerState::OnExperienceLoaded(const URCExperienceDefinition* /*CurrentExperience*/)
@@ -102,7 +128,6 @@ void ARCPlayerState::OnExperienceLoaded(const URCExperienceDefinition* /*Current
     }
 }
 
-
 void ARCPlayerState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
     Super::GetLifetimeReplicatedProps(OutLifetimeProps);
@@ -111,6 +136,13 @@ void ARCPlayerState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLi
     SharedParams.bIsPushBased = true;
     
     DOREPLIFETIME_WITH_PARAMS_FAST(ThisClass, PawnData, SharedParams);
+    DOREPLIFETIME_WITH_PARAMS_FAST(ThisClass, MyPlayerConnectionType, SharedParams)
+    DOREPLIFETIME_WITH_PARAMS_FAST(ThisClass, MyTeamID, SharedParams);
+    DOREPLIFETIME_WITH_PARAMS_FAST(ThisClass, MySquadID, SharedParams);
+
+    SharedParams.Condition = ELifetimeCondition::COND_SkipOwner;
+
+    DOREPLIFETIME(ThisClass, StatTags);	
 }
 
 
@@ -180,6 +212,78 @@ void ARCPlayerState::SetPawnData(const URCPawnData* InPawnData)
 
 void ARCPlayerState::OnRep_PawnData()
 {
+}
+
+void ARCPlayerState::SetPlayerConnectionType(ERCPlayerConnectionType NewType)
+{
+    MARK_PROPERTY_DIRTY_FROM_NAME(ThisClass, MyPlayerConnectionType, this);
+    MyPlayerConnectionType = NewType;
+}
+
+void ARCPlayerState::SetSquadID(int32 NewSquadId)
+{
+    if (HasAuthority())
+    {
+        MARK_PROPERTY_DIRTY_FROM_NAME(ThisClass, MySquadID, this);
+
+        MySquadID = NewSquadId;
+    }
+}
+
+void ARCPlayerState::SetGenericTeamId(const FGenericTeamId& NewTeamID)
+{
+    if (HasAuthority())
+    {
+        const FGenericTeamId OldTeamID = MyTeamID;
+
+        MARK_PROPERTY_DIRTY_FROM_NAME(ThisClass, MyTeamID, this);
+        MyTeamID = NewTeamID;
+        ConditionalBroadcastTeamChanged(this, OldTeamID, NewTeamID);
+    }
+    else
+    {
+        UE_LOG(LogRCTeams, Error, TEXT("Cannot set team for %s on non-authority"), *GetPathName(this));
+    }
+}
+
+FGenericTeamId ARCPlayerState::GetGenericTeamId() const
+{
+    return MyTeamID;
+}
+
+FOnRCTeamIndexChangedDelegate* ARCPlayerState::GetOnTeamIndexChangedDelegate()
+{
+    return &OnTeamChangedDelegate;
+}
+
+void ARCPlayerState::OnRep_MyTeamID(FGenericTeamId OldTeamID)
+{
+    ConditionalBroadcastTeamChanged(this, OldTeamID, MyTeamID);
+}
+
+void ARCPlayerState::OnRep_MySquadID()
+{
+    //@TODO: Let the squad subsystem know (once that exists)
+}
+
+void ARCPlayerState::AddStatTagStack(FGameplayTag Tag, int32 StackCount)
+{
+    StatTags.AddStack(Tag, StackCount);
+}
+
+void ARCPlayerState::RemoveStatTagStack(FGameplayTag Tag, int32 StackCount)
+{
+    StatTags.RemoveStack(Tag, StackCount);
+}
+
+int32 ARCPlayerState::GetStatTagStackCount(FGameplayTag Tag) const
+{
+    return StatTags.GetStackCount(Tag);
+}
+
+bool ARCPlayerState::HasStatTag(FGameplayTag Tag) const
+{
+    return StatTags.ContainsTag(Tag);
 }
 
 void ARCPlayerState::ClientBroadcastMessage_Implementation(const FRCVerbMessage Message)

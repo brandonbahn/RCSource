@@ -3,13 +3,13 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Engine/DataAsset.h"
 #include "Kismet/BlueprintFunctionLibrary.h"
 
 #include "RCInventoryItemDefinition.generated.h"
 
 template <typename T> class TSubclassOf;
 
+class URCInventoryItemInstance;
 struct FFrame;
 
 // Represents a fragment of an item definition
@@ -25,8 +25,8 @@ public:
 /**
  * URCInventoryItemDefinition
  */
-UCLASS(Blueprintable, Const, BlueprintType)
-class REDCELL_API URCInventoryItemDefinition : public UPrimaryDataAsset
+UCLASS(Blueprintable, Const, Abstract)
+class REDCELL_API URCInventoryItemDefinition : public UObject
 {
 	GENERATED_BODY()
 

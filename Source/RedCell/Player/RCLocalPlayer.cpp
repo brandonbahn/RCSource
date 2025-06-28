@@ -53,6 +53,49 @@ void URCLocalPlayer::LoadSharedSettingsFromDisk(bool bForceLoad)
 
 void URCLocalPlayer::OnPlayerControllerChanged(APlayerController* NewController)
 {
-	UE_LOG(LogTemp, Error, TEXT("LocalPlayer OnPlayerControllerChanged: %s"), 
-		   NewController ? *NewController->GetName() : TEXT("NULL"));
+	// Stop listening for changes from the old controller
+	FGenericTeamId OldTeamID = FGenericTeamId::NoTeam;
+	if (IRCTeamAgentInterface* ControllerAsTeamProvider = Cast<IRCTeamAgentInterface>(LastBoundPC.Get()))
+	{
+		OldTeamID = ControllerAsTeamProvider->GetGenericTeamId();
+		ControllerAsTeamProvider->GetTeamChangedDelegateChecked().RemoveAll(this);
+	}
+
+	// Grab the current team ID and listen for future changes
+	FGenericTeamId NewTeamID = FGenericTeamId::NoTeam;
+	if (IRCTeamAgentInterface* ControllerAsTeamProvider = Cast<IRCTeamAgentInterface>(NewController))
+	{
+		NewTeamID = ControllerAsTeamProvider->GetGenericTeamId();
+		ControllerAsTeamProvider->GetTeamChangedDelegateChecked().AddDynamic(this, &ThisClass::OnControllerChangedTeam);
+		LastBoundPC = NewController;
+	}
+
+	ConditionalBroadcastTeamChanged(this, OldTeamID, NewTeamID);
+}
+
+void URCLocalPlayer::SetGenericTeamId(const FGenericTeamId& NewTeamID)
+{
+	// Do nothing, we merely observe the team of our associated player controller
+}
+
+FGenericTeamId URCLocalPlayer::GetGenericTeamId() const
+{
+	if (IRCTeamAgentInterface* ControllerAsTeamProvider = Cast<IRCTeamAgentInterface>(PlayerController))
+	{
+		return ControllerAsTeamProvider->GetGenericTeamId();
+	}
+	else
+	{
+		return FGenericTeamId::NoTeam;
+	}
+}
+
+FOnRCTeamIndexChangedDelegate* URCLocalPlayer::GetOnTeamIndexChangedDelegate()
+{
+	return &OnTeamChangedDelegate;
+}
+
+void URCLocalPlayer::OnControllerChangedTeam(UObject* TeamAgent, int32 OldTeam, int32 NewTeam)
+{
+	ConditionalBroadcastTeamChanged(this, IntegerToGenericTeamId(OldTeam), IntegerToGenericTeamId(NewTeam));
 }

@@ -5,12 +5,20 @@
 #include "RCPlayerController.h"
 #include "CommonInputTypeEnum.h"
 #include "Character/RCCharacter.h"
+#include "Components/PrimitiveComponent.h"
 #include "RCPlayerState.h"
 #include "UI/RCHUD.h"
 #include "AbilitySystem/RCAbilitySystemComponent.h"
+#include "EngineUtils.h"
 #include "RCGameplayTags.h"
+#include "GameFramework/Pawn.h"
+#include "Engine/GameInstance.h"
+#include "AbilitySystemGlobals.h"
 #include "CommonInputSubsystem.h"
+#include "RCLocalPlayer.h"
+#include "Development/RCDeveloperSettings.h"
 #include "Net/UnrealNetwork.h"
+#include "GameMapsSettings.h"
 #include "RCLogChannels.h"
 #include "Camera/RCPlayerCameraManager.h"
 #include "GameModes/RCGameState.h"
@@ -22,7 +30,7 @@ namespace RedCell
     namespace Input
     {
         static int32 ShouldAlwaysPlayForceFeedback = 0;
-        static FAutoConsoleVariableRef CVarShouldAlwaysPlayForceFeedback(TEXT("LyraPC.ShouldAlwaysPlayForceFeedback"),
+        static FAutoConsoleVariableRef CVarShouldAlwaysPlayForceFeedback(TEXT("RedCellPC.ShouldAlwaysPlayForceFeedback"),
             ShouldAlwaysPlayForceFeedback,
             TEXT("Should force feedback effects be played, even if the last input device was not a gamepad?"));
     }
@@ -70,12 +78,45 @@ ARCHUD* ARCPlayerController::GetRCHUD() const
     return CastChecked<ARCHUD>(GetHUD(), ECastCheckedType::NullAllowed);
 }
 
+void ARCPlayerController::OnPlayerStateChangedTeam(UObject* TeamAgent, int32 OldTeam, int32 NewTeam)
+{
+    ConditionalBroadcastTeamChanged(this, IntegerToGenericTeamId(OldTeam), IntegerToGenericTeamId(NewTeam));
+}
+
 void ARCPlayerController::OnPlayerStateChanged()
 {
 }
 
 void ARCPlayerController::BroadcastOnPlayerStateChanged()
 {
+    OnPlayerStateChanged();
+
+    // Unbind from the old player state, if any
+    FGenericTeamId OldTeamID = FGenericTeamId::NoTeam;
+    if (LastSeenPlayerState != nullptr)
+    {
+        if (IRCTeamAgentInterface* PlayerStateTeamInterface = Cast<IRCTeamAgentInterface>(LastSeenPlayerState))
+        {
+            OldTeamID = PlayerStateTeamInterface->GetGenericTeamId();
+            PlayerStateTeamInterface->GetTeamChangedDelegateChecked().RemoveAll(this);
+        }
+    }
+
+    // Bind to the new player state, if any
+    FGenericTeamId NewTeamID = FGenericTeamId::NoTeam;
+    if (PlayerState != nullptr)
+    {
+        if (IRCTeamAgentInterface* PlayerStateTeamInterface = Cast<IRCTeamAgentInterface>(PlayerState))
+        {
+            NewTeamID = PlayerStateTeamInterface->GetGenericTeamId();
+            PlayerStateTeamInterface->GetTeamChangedDelegateChecked().AddDynamic(this, &ThisClass::OnPlayerStateChangedTeam);
+        }
+    }
+
+    // Broadcast the team change (if it really has)
+    ConditionalBroadcastTeamChanged(this, OldTeamID, NewTeamID);
+
+    LastSeenPlayerState = PlayerState;
 }
 
 void ARCPlayerController::OnPossess(APawn* InPawn)
@@ -85,6 +126,18 @@ void ARCPlayerController::OnPossess(APawn* InPawn)
 
 void ARCPlayerController::OnUnPossess()
 {
+    // Make sure the pawn that is being unpossessed doesn't remain our ASC's avatar actor
+    if (APawn* PawnBeingUnpossessed = GetPawn())
+    {
+        if (UAbilitySystemComponent* ASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(PlayerState))
+        {
+            if (ASC->GetAvatarActor() == PawnBeingUnpossessed)
+            {
+                ASC->SetAvatarActor(nullptr);
+            }
+        }
+    }
+
     Super::OnUnPossess();
 }
 
@@ -153,5 +206,23 @@ void ARCPlayerController::PostProcessInput(const float DeltaTime, const bool bGa
     Super::PostProcessInput(DeltaTime, bGamePaused);
 }
 
+void ARCPlayerController::SetGenericTeamId(const FGenericTeamId& NewTeamID)
+{
+    UE_LOG(LogRCTeams, Error, TEXT("You can't set the team ID on a player controller (%s); it's driven by the associated player state"), *GetPathNameSafe(this));
+}
+
+FGenericTeamId ARCPlayerController::GetGenericTeamId() const
+{
+    if (const IRCTeamAgentInterface* PSWithTeamInterface = Cast<IRCTeamAgentInterface>(PlayerState))
+    {
+        return PSWithTeamInterface->GetGenericTeamId();
+    }
+    return FGenericTeamId::NoTeam;
+}
+
+FOnRCTeamIndexChangedDelegate* ARCPlayerController::GetOnTeamIndexChangedDelegate()
+{
+    return &OnTeamChangedDelegate;
+}
 
 

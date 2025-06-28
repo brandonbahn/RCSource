@@ -5,6 +5,7 @@
 #include "AbilitySystem/RCAbilitySystemComponent.h"
 #include "Character/RCMovementModes.h"
 #include "Character/RCCharacter.h"
+#include "Character/RCPawnData.h"
 #include "KismetAnimationLibrary.h"
 #include "Input/RCInputConfig.h"
 
@@ -128,7 +129,8 @@ float URCCharacterMovementComponent::CalculateBrakingDeceleration() const
 {
     if (IsFalling())
     {
-        return GetPendingInputVector().IsNearlyZero() ? 100.0f : 50.0f;   
+        //return GetPendingInputVector().IsNearlyZero() ? 100.0f : 50.0f;
+        return BrakingDecelerationFalling;
     } 
     return GetPendingInputVector().IsNearlyZero() ? 2000.0f : 500.0f;
 }
@@ -160,6 +162,11 @@ float URCCharacterMovementComponent::CalculateGroundFriction() const
 
 float URCCharacterMovementComponent::CalculateMaxSpeed() const
 {
+    if (IsFalling())
+    {
+        return MaxWalkSpeed;   
+    }
+    
     E_Gait CurrentGait = GetDesiredGait();
 
     if (IsCrouching())
@@ -185,7 +192,7 @@ float URCCharacterMovementComponent::CalculateMaxSpeed() const
         return FMath::GetMappedRangeValueClamped(bStrafe ? RangeA1 : RangeA2,
             FVector2D(bStrafe ? Speeds.X : Speeds.Y, bStrafe ? Speeds.Y : Speeds.Z), StrafeSpeedMap);
     }
-    return INDEX_NONE;
+    return MaxWalkSpeed;
 }
 
 float URCCharacterMovementComponent::CalculateMaxCrouchSpeed() const
